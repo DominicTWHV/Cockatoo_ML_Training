@@ -100,7 +100,7 @@ class LiveMetricsWebhookCallback(TrainerCallback):
         self.endpoint_url = endpoint_url
         self.headers = {"Content-Type": "application/json"}
         if auth_token:
-            self.headers["Authorization"] = f"Bearer {auth_token}"
+            self.headers["Authorization"] = f"{auth_token}"
         self.experiment_id = experiment_id or "default-run"
 
     def _send_metrics(self, payload: dict):
