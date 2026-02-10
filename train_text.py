@@ -176,7 +176,7 @@ trainer = CustomTrainer(
 )
 
 
-webhook_url = "http://10.0.1.10:5000/api/training/data"
+webhook_url = "https://api.cockatoo.dev/api/training/data"
 trainer.add_callback(LiveMetricsWebhookCallback(
     endpoint_url=webhook_url,
     auth_token=os.getenv("METRICS_API_KEY"),
