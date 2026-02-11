@@ -3,7 +3,7 @@
 | **Phishing Dataset** | MIT | [Hugging Face](https://huggingface.co/datasets/ealvaradob/phishing-dataset) |
 | **Measuring Hate Speech** | CC-BY-4.0 | [Hugging Face](https://huggingface.co/datasets/ucberkeley-dlab/measuring-hate-speech) |
 | **Tweet Eval (SemEval-2019)** | [See Citation]* | [Hugging Face](https://huggingface.co/datasets/cardiffnlp/tweet_eval) |
-| **NSFW Detect** | MIT | [Hugging Face](https://huggingface.co/datasets/deepghs/nsfw_detect) |
+| **NSFW Detect** | MIT | [Hugging Face](https://huggingface.co/datasets/deepghs/nsfw_detect) (Unused)|
 | **Toxic Chat** | CC-BY-NC-4.0 | [Hugging Face](https://huggingface.co/datasets/lmsys/toxic-chat) |
 | **Jigsaw Toxicity** | Apache-2.0 | [Hugging Face](https://huggingface.co/datasets/tasksource/jigsaw_toxicity) |
 | **Text Moderation Multilingual** | Apache-2.0 | [Hugging Face](https://huggingface.co/datasets/KoalaAI/Text-Moderation-Multilingual) |
