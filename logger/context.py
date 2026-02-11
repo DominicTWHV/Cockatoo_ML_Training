@@ -1,4 +1,7 @@
 import logging
+import os
+
+from pathlib import Path
 
 from cockatoo_ml.registry.colors import bcolors
 
@@ -34,6 +37,11 @@ file_handler_formatter = logging.Formatter(
 )
 
 def setup_logger(name, log_file, level=logging.INFO, name_color: bool = None, retain: bool = False):
+    log_dir = Path(log_file).parent
+    log_dir.mkdir(parents=True, exist_ok=True)
+    
+    file_handler = logging.FileHandler(filename=log_file, encoding="utf-8", mode="a" if retain else "w")
+    
     logger = logging.getLogger(name)
     logger.setLevel(level)
     logger.handlers = []
