@@ -1,6 +1,6 @@
 import torch
 from transformers import pipeline, AutoTokenizer, AutoModelForSequenceClassification
-from typing import Dict, List, Optional
+from typing import Dict
 from pathlib import Path
 
 
@@ -48,8 +48,15 @@ class ThreatClassifier:
         try:
             if self.classifier is not None:
                 # Pipeline way (preferred)
-                raw_results = self.classifier(text, truncation=True, max_length=512)[0]
-                probs = {self.id2label.get(i, f"LABEL_{i}"): round(score, 4) for i, score in enumerate(raw_results)}
+                # With return_all_scores=True, returns [[{dict}, {dict}]] for single input
+                raw_results = self.classifier(text, truncation=True, max_length=512)
+                
+                # Extract the list of label-score dicts (handle both batch and single input)
+                if isinstance(raw_results, list) and len(raw_results) > 0:
+                    scores_list = raw_results[0] if isinstance(raw_results[0], list) else raw_results
+                    probs = {item['label']: round(item['score'], 4) for item in scores_list}
+                else:
+                    return {"error": "Unexpected pipeline output format"}
             else:
                 # Manual way
                 inputs = self.tokenizer(text, return_tensors="pt", truncation=True, max_length=512)
