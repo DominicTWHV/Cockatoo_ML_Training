@@ -1,5 +1,6 @@
 /.env
 /.venv
+/venv
 /data
 
 /constellation_one_text
