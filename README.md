@@ -17,7 +17,10 @@ The training code is built around torch with a pipeline pulling datasets from Hu
 ```bash
 python3 -m venv venv
 source venv/bin/activate
-pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cu121
+pip install -r requirements.txt
+
+#install torch separately
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
 ```
 
 **Run Training**
