@@ -3,3 +3,6 @@
 /data
 
 /constellation_one_text
+
+*.pyc
+*__pycache__/
