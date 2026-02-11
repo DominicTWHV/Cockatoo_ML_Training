@@ -8,17 +8,18 @@ from train.metrics import compute_metrics
 from train.config import get_training_args
 from train.trainer import CustomTrainer
 from train.callbacks import LiveMetricsWebhookCallback
+from logging.context import model_training_logger as logger
 
 
 load_dotenv()
 
-print("Starting training script...")
+logger.info("Starting training script...")
 
 # entrypoint for model training
 def main():
     # load the preprocessed dataset
     dataset = load_from_disk('data/processed_text')
-    print("Dataset loaded. Train size:", len(dataset['train']))
+    logger.info(f"Dataset loaded. Train size: {len(dataset['train'])}")
     
     # init the tokenizer to tokenize the dataset
     tokenizer = get_tokenizer("microsoft/deberta-v3-base")
@@ -63,17 +64,17 @@ def main():
     ))
     
     # start training
-    print("Starting training...")
+    logger.info("Starting training...")
     trainer.train()
     
     # save the trained model
     trainer.save_model('constellation_one_text')
-    print("Training finished. Model saved to: constellation_one_text")
+    logger.info("Training finished. Model saved to: constellation_one_text")
     
     # evaluate the test set
-    print("Evaluating on test set...")
+    logger.info("Evaluating on test set...")
     test_results = trainer.evaluate(tokenized_dataset['test'])
-    print("Test results:", test_results)
+    logger.info(f"Test results: {test_results}")
 
     #done!
 
