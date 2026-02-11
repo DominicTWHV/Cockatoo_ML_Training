@@ -4,7 +4,6 @@ from huggingface_hub import snapshot_download
 
 from logger.context import data_download_logger as logger
 
-
 def download_dataset(repo_id, local_subdir, base_dir="./data", repo_type="dataset"):
     # helper function to pull a dataset from hf hub and save to data folder
     os.makedirs(base_dir, exist_ok=True)
