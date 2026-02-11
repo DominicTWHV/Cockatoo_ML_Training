@@ -1,12 +1,16 @@
 # Cockatoo ML Training/Inferencing server
 
-This repository is provided as a reference implementation for the training/inferencing server component of Cockatoo. We have designed it to fit our specific use case, but it was designed with flexibility in mind.
+This repository is provided as a reference implementation for the training/inferencing server component of Cockatoo. We have designed it to fit our specific use case, but it was also designed with flexibility in mind.
 
 ---
 
 ## Training
 
-The training code is built around torch with a pipeline pulling datasets from Hugging Face and pushing metrics to a custom API server. You may follow these steps to run the training loop on your local machine:
+The training code is built around torch with a pipeline pulling datasets from Hugging Face and pushing metrics to a custom API server.
+
+We recommend running the training loop with a GPU-enabled device. Although training on CPU is possible without config changes, it will be significantly slower and would not be practical in this case (processed dataset size ~493 MB, CPU-based training can easily take multiple days to complete).
+
+You may follow these steps to run the training loop on your local machine:
 
 **Install Deps**
 
@@ -23,6 +27,14 @@ pip install -r requirements.txt
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
 ```
 
+Verify that torch is installed correctly and can access your GPU:
+
+```bash
+python3 test_gpu.py
+```
+
+You should see your GPU being listed in the output along with the number of CUDA devices available.
+
 **Run Training**
 
 Load dataset from Hugging Face:
@@ -38,6 +50,9 @@ Preprocess dataset:
 ```bash
 python3 prepare_data.py
 ```
+
+> [!Important]
+> Before you start the training loop, please review the trainer configs at `cockatoo_ml/registry/training.py` and adjust them as needed. For example, if you run into OOM errors, you may want to reduce the batch size, or increase it if you desire a faster training speed and have the hardware to support it.
 
 Run training loop:
 
