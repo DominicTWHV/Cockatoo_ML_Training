@@ -6,7 +6,7 @@ This repository is provided as a reference implementation for the training/infer
 
 ## Training
 
-The training code is built around torch with a pipeline pulling datasets from Hugging Face and pushing metrics to Weights & Biases. You can run it with:
+The training code is built around torch with a pipeline pulling datasets from Hugging Face and pushing metrics to a custom API server. You may follow these steps to run the training loop on your local machine:
 
 **Install Deps**
 
@@ -23,6 +23,8 @@ pip install -r requirements.txt --extra-index-url https://download.pytorch.org/w
 **Run Training**
 
 Load dataset from Hugging Face:
+
+*If it fails, you may have to log into the Hugging Face CLI with `huggingface-cli login`*
 
 ```bash
 python3 download_data.py
