@@ -1,9 +1,8 @@
 import requests
-from datetime import datetime
+from datetime import datetime, timezone
 from transformers import TrainerCallback
 
 from logger.context import model_training_logger as logger
-
 
 class LiveMetricsWebhookCallback(TrainerCallback):
     # metrics hook callback to send training and evaluation metrics to a remote endpoint in real-time
@@ -34,7 +33,7 @@ class LiveMetricsWebhookCallback(TrainerCallback):
                 "global_step": state.global_step,
                 "epoch": state.epoch,
                 "metrics": latest_metrics,
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": datetime.now(timezone.utc).isoformat()
             }
             
             self._send_metrics(payload)
@@ -46,7 +45,7 @@ class LiveMetricsWebhookCallback(TrainerCallback):
                 "global_step": state.global_step,
                 "epoch": state.epoch,
                 "metrics": metrics,
-                "timestamp": datetime.utcnow().isoformat(),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
                 "is_eval": True
             }
             self._send_metrics(payload)

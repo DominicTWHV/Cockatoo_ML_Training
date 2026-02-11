@@ -14,8 +14,7 @@ def download_dataset(repo_id, local_subdir, base_dir="./data", repo_type="datase
             repo_id=repo_id,
             repo_type=repo_type,
             local_dir=os.path.join(base_dir, local_subdir),
-            ignore_patterns=["*.gitattributes", "README.md"], 
-            resume_download=True
+            ignore_patterns=["*.gitattributes", "README.md"]
         )
         logger.info(f"Done: {repo_id}")
         return True
