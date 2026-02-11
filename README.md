@@ -88,6 +88,13 @@ hypercorn app:app --bind 0.0.0.0:8000
 /health
 - Method: GET
 - Description: Checks if the server is responding and healthy. Returns a simple JSON response indicating the status.
+- Response Body:
+```json
+{
+  "status": "ok",
+  "model": "constellation_one_text"
+}
+```
 
 /predict
 - Method: POST
