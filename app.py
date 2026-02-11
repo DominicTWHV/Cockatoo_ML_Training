@@ -3,6 +3,7 @@ from quart import Quart, request, jsonify
 
 from inference.model import ThreatClassifier
 from inference.schemas import PredictionRequest, PredictionResponse
+from logging.context import inference_api_server_logger as logger
 
 app = Quart(__name__)
 classifier = None
@@ -10,39 +11,37 @@ classifier = None
 
 @app.before_serving
 async def initialize():
-    """Initialize model before handling requests"""
+    # init the model into global scope so it can be reused
     global classifier
     classifier = ThreatClassifier()
-    print("✓ Model loaded and ready for inference")
+    logger.info("Model loaded and ready for inference")
 
 
 @app.route("/health", methods=["GET"])
 async def health():
-    """Health check endpoint"""
+    # server health check
     return jsonify({"status": "ok", "model": "constellation_one_text"})
 
 
 @app.route("/predict", methods=["POST"])
 async def predict():
-    """Inference endpoint for threat classification"""
+    # inference endpoint for single text input
     try:
         data = await request.get_json()
         req = PredictionRequest(**data)
         
-        # Run blocking inference in thread pool
+        # run blocking inference in thread pool
         result = await asyncio.to_thread(classifier.predict, req.text)
         
         if "error" in result:
             return jsonify({"error": result["error"]}), 400
         
-        # FIX: Ensure score and threshold are compared as floats
-        # This prevents the "type str doesn't define __round__ method" error
         positive_labels = [
             label for label, score in result["predictions"].items()
             if float(score) >= float(req.threshold)
         ]
         
-        # Ensure numeric values in response are actual numbers
+        # call into the inference helper to get predictions and format response
         response = PredictionResponse(
             text=req.text,
             predictions=result["predictions"],
@@ -55,13 +54,13 @@ async def predict():
     
     except ValueError as e:
         return jsonify({"error": f"Validation error: {str(e)}"}), 422
+    
     except Exception as e:
-        # This will catch the type mismatch and return a 500
+        # catch errors
         return jsonify({"error": str(e)}), 500
 
 @app.route("/batch", methods=["POST"])
 async def batch_predict():
-    """Batch inference endpoint"""
     try:
         data = await request.get_json()
         texts = data.get("texts", [])
@@ -93,5 +92,7 @@ async def batch_predict():
 
 
 if __name__ == "__main__":
-    # Run with: hypercorn app:app --bind 0.0.0.0:8000
-    app.run(debug=False)
+    # run with: hypercorn app:app --bind 0.0.0.0:8000
+
+    # development server (not for production use)
+    app.run(debug=True, host="0.0.0.0", port=8000)
