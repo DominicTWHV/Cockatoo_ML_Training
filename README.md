@@ -46,6 +46,8 @@ We have integrated a hook to push training data live to an API server. You can m
 
 The metrics hook can also be disabled entirely by setting `WebhookConfig.enable` to `False` in `cockatoo_ml/registry/api.py`.
 
+This is the telemetry system we use at [cockatoo.dev](https://cockatoo.dev/ml-training.html) to monitor and publish training data across all our models in one place.
+
 ---
 
 ## Inferencing Server:
