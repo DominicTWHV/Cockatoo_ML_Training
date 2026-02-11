@@ -2,7 +2,7 @@ import requests
 from datetime import datetime
 from transformers import TrainerCallback
 
-from logging.context import model_training_logger as logger
+from logger.context import model_training_logger as logger
 
 
 class LiveMetricsWebhookCallback(TrainerCallback):

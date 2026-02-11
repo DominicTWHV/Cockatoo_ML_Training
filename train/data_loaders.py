@@ -3,7 +3,7 @@
 import os
 import pandas as pd
 
-from logging.context import data_processing_logger as logger
+from logger.context import data_processing_logger as logger
 
 
 # text column in different sets

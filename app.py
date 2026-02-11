@@ -3,7 +3,7 @@ from quart import Quart, request, jsonify
 
 from inference.model import ThreatClassifier
 from inference.schemas import PredictionRequest, PredictionResponse
-from logging.context import inference_api_server_logger as logger
+from logger.context import inference_api_server_logger as logger
 
 app = Quart(__name__)
 classifier = None

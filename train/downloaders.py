@@ -2,7 +2,7 @@ import os
 
 from huggingface_hub import snapshot_download
 
-from logging.context import data_download_logger as logger
+from logger.context import data_download_logger as logger
 
 
 def download_dataset(repo_id, local_subdir, base_dir="./data", repo_type="dataset"):

@@ -2,7 +2,7 @@ import torch
 
 from transformers import AutoModelForSequenceClassification
 
-from logging.context import model_training_logger as logger
+from logger.context import model_training_logger as logger
 
 
 def compute_pos_weight(dataset):

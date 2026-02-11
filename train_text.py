@@ -8,7 +8,7 @@ from train.metrics import compute_metrics
 from train.config import get_training_args
 from train.trainer import CustomTrainer
 from train.callbacks import LiveMetricsWebhookCallback
-from logging.context import model_training_logger as logger
+from logger.context import model_training_logger as logger
 
 
 load_dotenv()

@@ -3,7 +3,7 @@ from transformers import pipeline, AutoTokenizer, AutoModelForSequenceClassifica
 from typing import Dict
 from pathlib import Path
 
-from logging.context import inference_api_server_logger as logger
+from logger.context import inference_api_server_logger as logger
 
 
 class ThreatClassifier:

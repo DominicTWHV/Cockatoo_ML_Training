@@ -1,7 +1,7 @@
 import os
 from train.data_loaders import load_all_datasets
 from train.data_processors import combine_datasets, split_dataset, print_dataset_stats
-from logging.context import data_processing_logger as logger
+from logger.context import data_processing_logger as logger
 
 # entrypoint to prepare data for training
 BASE_DIR = "./data"

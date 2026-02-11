@@ -3,7 +3,7 @@ import pandas as pd
 from datasets import Dataset, DatasetDict
 from sklearn.model_selection import train_test_split
 
-from logging.context import data_processing_logger as logger
+from logger.context import data_processing_logger as logger
 
 # the data processor takes in the loaded datasets, applies appropriate labels, combines them, and splits into train/val/test sets for training
 def make_labels(scam=0, violence=0, nsfw=0, harassment=0):
