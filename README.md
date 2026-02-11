@@ -1,6 +1,6 @@
-## Cockatoo ML Training/Inferencing server
+# Cockatoo ML Training/Inferencing server
 
-This repository is provided as a reference implementation for the training/inferencing server component of Cockatoo. We have designed it to fit our specific use cae, but it was designed with flexibility in mind.
+This repository is provided as a reference implementation for the training/inferencing server component of Cockatoo. We have designed it to fit our specific use case, but it was designed with flexibility in mind.
 
 ---
 
