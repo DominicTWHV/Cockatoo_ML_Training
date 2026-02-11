@@ -2,7 +2,7 @@ import os
 from train.data_loaders import load_all_datasets
 from train.data_processors import combine_datasets, split_dataset, print_dataset_stats
 from cockatoo_ml.registry import PathConfig
-from logger.context import data_processing_logger as logger
+from cockatoo_ml.logger.context import data_processing_logger as logger
 
 # entrypoint to prepare data for training
 os.makedirs(PathConfig.BASE_DATA_DIR, exist_ok=True)

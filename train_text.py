@@ -9,7 +9,7 @@ from train.config import get_training_args
 from train.trainer import CustomTrainer
 from train.callbacks import LiveMetricsWebhookCallback
 from cockatoo_ml.registry import PathConfig, ModelConfig, WebhookConfig, CallbackConfig
-from logger.context import model_training_logger as logger
+from cockatoo_ml.logger.context import model_training_logger as logger
 
 
 load_dotenv()

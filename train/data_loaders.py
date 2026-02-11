@@ -4,7 +4,7 @@ import os
 import pandas as pd
 
 from cockatoo_ml.registry import DatasetPaths, DatasetColumns, PathConfig
-from logger.context import data_processing_logger as logger
+from cockatoo_ml.logger.context import data_processing_logger as logger
 
 
 def find_text_column(df):

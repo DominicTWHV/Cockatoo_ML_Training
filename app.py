@@ -4,7 +4,7 @@ from quart import Quart, request, jsonify
 from inference.model import ThreatClassifier
 from inference.schemas import PredictionRequest, PredictionResponse
 from cockatoo_ml.registry import APIConfig
-from logger.context import inference_api_server_logger as logger
+from cockatoo_ml.logger.context import inference_api_server_logger as logger
 
 app = Quart(__name__)
 classifier = None

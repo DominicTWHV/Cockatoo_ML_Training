@@ -3,7 +3,7 @@ import torch
 from transformers import AutoTokenizer
 
 from cockatoo_ml.registry import ModelConfig
-from logger.context import data_processing_logger as logger
+from cockatoo_ml.logger.context import data_processing_logger as logger
 
 
 def get_tokenizer(model_name=None):

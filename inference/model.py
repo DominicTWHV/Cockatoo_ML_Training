@@ -4,7 +4,7 @@ from typing import Dict
 from pathlib import Path
 
 from cockatoo_ml.registry import InferenceConfig, ModelConfig
-from logger.context import inference_api_server_logger as logger
+from cockatoo_ml.logger.context import inference_api_server_logger as logger
 
 
 class ThreatClassifier:

@@ -3,7 +3,7 @@ import torch
 from transformers import AutoModelForSequenceClassification
 
 from cockatoo_ml.registry import ModelConfig
-from logger.context import model_training_logger as logger
+from cockatoo_ml.logger.context import model_training_logger as logger
 
 
 def compute_pos_weight(dataset):

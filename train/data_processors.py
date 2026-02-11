@@ -4,7 +4,7 @@ from datasets import Dataset, DatasetDict
 from sklearn.model_selection import train_test_split
 
 from cockatoo_ml.registry import LabelConfig, DatasetTypeConfig, DataSplitConfig, DatasetColumns
-from logger.context import data_processing_logger as logger
+from cockatoo_ml.logger.context import data_processing_logger as logger
 
 # the data processor takes in the loaded datasets, applies appropriate labels, combines them, and splits into train/val/test sets for training
 def apply_labels_by_type(df, dataset_type):

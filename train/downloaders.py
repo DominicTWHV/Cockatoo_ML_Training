@@ -3,7 +3,7 @@ import os
 from huggingface_hub import snapshot_download
 
 from cockatoo_ml.registry import DatasetSources, PathConfig
-from logger.context import data_download_logger as logger
+from cockatoo_ml.logger.context import data_download_logger as logger
 
 def download_dataset(repo_id, local_subdir, base_dir=None, repo_type=None):
     # helper function to pull a dataset from hf hub and save to data folder

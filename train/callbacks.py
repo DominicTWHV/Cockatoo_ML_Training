@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from transformers import TrainerCallback
 
 from cockatoo_ml.registry import CallbackConfig
-from logger.context import model_training_logger as logger
+from cockatoo_ml.logger.context import model_training_logger as logger
 
 class LiveMetricsWebhookCallback(TrainerCallback):
     # metrics hook callback to send training and evaluation metrics to a remote endpoint in real-time
