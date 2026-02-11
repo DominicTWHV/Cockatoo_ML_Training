@@ -2,16 +2,22 @@ import torch
 
 from transformers import AutoTokenizer
 
+from cockatoo_ml.registry import ModelConfig
 from logger.context import data_processing_logger as logger
 
 
-def get_tokenizer(model_name="microsoft/deberta-v3-base"):
+def get_tokenizer(model_name=None):
     # load tokenizer from model
+    if model_name is None:
+        model_name = ModelConfig.BASE_MODEL_NAME
     return AutoTokenizer.from_pretrained(model_name)
 
 
-def create_preprocess_function(tokenizer, max_length=256):
+def create_preprocess_function(tokenizer, max_length=None):
     # use the tokenizer to preprocess the text for training
+    if max_length is None:
+        max_length = ModelConfig.MAX_TOKEN_LENGTH
+        
     def preprocess(examples):
         tokenized = tokenizer(
             examples['text'],
@@ -26,8 +32,11 @@ def create_preprocess_function(tokenizer, max_length=256):
     return preprocess
 
 
-def tokenize_dataset(dataset, tokenizer, max_length=256):
+def tokenize_dataset(dataset, tokenizer, max_length=None):
     # tokenize the dataset using the provided tokenizer and max length (wrapper)
+    if max_length is None:
+        max_length = ModelConfig.MAX_TOKEN_LENGTH
+        
     preprocess = create_preprocess_function(tokenizer, max_length)
     
     logger.info("Tokenizing dataset...")

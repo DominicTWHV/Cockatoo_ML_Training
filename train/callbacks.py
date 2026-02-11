@@ -2,6 +2,7 @@ import requests
 from datetime import datetime, timezone
 from transformers import TrainerCallback
 
+from cockatoo_ml.registry import CallbackConfig
 from logger.context import model_training_logger as logger
 
 class LiveMetricsWebhookCallback(TrainerCallback):
@@ -12,12 +13,17 @@ class LiveMetricsWebhookCallback(TrainerCallback):
         self.headers = {"Content-Type": "application/json"}
         if auth_token:
             self.headers["Authorization"] = auth_token
-        self.experiment_id = experiment_id or "default-run"
+        self.experiment_id = experiment_id or CallbackConfig.DEFAULT_EXPERIMENT_ID
 
     def _send_metrics(self, payload: dict):
         try:
             # dispatch metrics to api server
-            r = requests.post(self.endpoint_url, json=payload, headers=self.headers, timeout=5)
+            r = requests.post(
+                self.endpoint_url, 
+                json=payload, 
+                headers=self.headers, 
+                timeout=CallbackConfig.WEBHOOK_TIMEOUT
+            )
             r.raise_for_status()
 
         except Exception as e:

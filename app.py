@@ -3,6 +3,7 @@ from quart import Quart, request, jsonify
 
 from inference.model import ThreatClassifier
 from inference.schemas import PredictionRequest, PredictionResponse
+from cockatoo_ml.registry import APIConfig
 from logger.context import inference_api_server_logger as logger
 
 app = Quart(__name__)
@@ -20,7 +21,7 @@ async def initialize():
 @app.route("/health", methods=["GET"])
 async def health():
     # server health check
-    return jsonify({"status": "ok", "model": "constellation_one_text"})
+    return jsonify({"status": "ok", "model": APIConfig.MODEL_NAME})
 
 
 @app.route("/predict", methods=["POST"])
@@ -64,7 +65,7 @@ async def batch_predict():
     try:
         data = await request.get_json()
         texts = data.get("texts", [])
-        threshold = data.get("threshold", 0.5)
+        threshold = data.get("threshold", APIConfig.DEFAULT_THRESHOLD)
         
         if not texts or not isinstance(texts, list):
             return jsonify({"error": "texts must be a non-empty list"}), 400
@@ -95,4 +96,4 @@ if __name__ == "__main__":
     # run with: hypercorn app:app --bind 0.0.0.0:8000
 
     # development server (not for production use)
-    app.run(debug=True, host="0.0.0.0", port=8000)
+    app.run(debug=APIConfig.DEBUG, host=APIConfig.HOST, port=APIConfig.PORT)

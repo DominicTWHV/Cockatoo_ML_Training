@@ -3,16 +3,13 @@
 import os
 import pandas as pd
 
+from cockatoo_ml.registry import DatasetPaths, DatasetColumns, PathConfig
 from logger.context import data_processing_logger as logger
-
-
-# text column in different sets
-TEXT_CANDIDATES = ['text', 'comment_text', 'user_input', 'conversation', 'content', 'message']
 
 
 def find_text_column(df):
     # find the first matching text candidate column in dframe
-    for col in TEXT_CANDIDATES:
+    for col in DatasetColumns.TEXT_CANDIDATES:
         if col in df.columns:
             logger.info(f"Found text column: {col}")
             return col
@@ -20,16 +17,18 @@ def find_text_column(df):
     return None
 
 
-def load_phishing_dataset(base_dir="./data"):
+def load_phishing_dataset(base_dir=None):
     # load the phishing dataset from json file (combined_reduced.json) and find text col
+    if base_dir is None:
+        base_dir = PathConfig.BASE_DATA_DIR
 
-    phish_path = os.path.join(base_dir, "phishing", "combined_reduced.json")
+    phish_path = os.path.join(base_dir, DatasetPaths.PHISHING_DIR, DatasetPaths.PHISHING_FILE)
     if os.path.exists(phish_path):
         df_phish = pd.read_json(phish_path)
         text_col = find_text_column(df_phish)
 
         if text_col:
-            df_phish = df_phish[[text_col]].dropna().rename(columns={text_col: 'text'})
+            df_phish = df_phish[[text_col]].dropna().rename(columns={text_col: DatasetColumns.TEXT_COL})
             logger.info(f"Phishing loaded: {len(df_phish)} samples (text col: {text_col})")
             return df_phish, 'phishing'
         
@@ -42,22 +41,25 @@ def load_phishing_dataset(base_dir="./data"):
     return None, None
 
 
-def load_hate_speech_dataset(base_dir="./data"):
+def load_hate_speech_dataset(base_dir=None):
     # load the measuring hate speech dataset from parquet and find text and hate score cols
-    hate_path = os.path.join(base_dir, "hate_speech_measuring", "data", "measuring-hate-speech.parquet")
+    if base_dir is None:
+        base_dir = PathConfig.BASE_DATA_DIR
+        
+    hate_path = os.path.join(base_dir, DatasetPaths.HATE_SPEECH_DIR, DatasetPaths.HATE_SPEECH_SUBDIR, DatasetPaths.HATE_SPEECH_FILE)
     if not os.path.exists(hate_path):
-        hate_path = os.path.join(base_dir, "hate_speech_measuring", "data", "train-00000-of-00001.parquet")
+        hate_path = os.path.join(base_dir, DatasetPaths.HATE_SPEECH_DIR, DatasetPaths.HATE_SPEECH_SUBDIR, DatasetPaths.HATE_SPEECH_FALLBACK_FILE)
 
     if os.path.exists(hate_path):
         df_hate = pd.read_parquet(hate_path)
 
-        if 'text' in df_hate.columns and 'hate_speech_score' in df_hate.columns:
-            df_hate = df_hate[['text', 'hate_speech_score']].dropna()
+        if DatasetColumns.TEXT_COL in df_hate.columns and DatasetColumns.HATE_SPEECH_SCORE_COL in df_hate.columns:
+            df_hate = df_hate[[DatasetColumns.TEXT_COL, DatasetColumns.HATE_SPEECH_SCORE_COL]].dropna()
             logger.info(f"Measuring hate loaded: {len(df_hate)} samples")
             return df_hate, 'hate_speech'
         
         else:
-            logger.warning("Measuring hate: Expected columns 'text' and 'hate_speech_score' not found - skipping")
+            logger.warning(f"Measuring hate: Expected columns '{DatasetColumns.TEXT_COL}' and '{DatasetColumns.HATE_SPEECH_SCORE_COL}' not found - skipping")
 
     else:
         logger.warning("Measuring hate parquet not found")
@@ -65,40 +67,44 @@ def load_hate_speech_dataset(base_dir="./data"):
     return None, None
 
 
-def load_tweet_hate_dataset(base_dir="./data"):
+def load_tweet_hate_dataset(base_dir=None):
     # load the tweet_eval hate speech dataset from parquet and find text and label cols
+    if base_dir is None:
+        base_dir = PathConfig.BASE_DATA_DIR
 
-    tweet_hate_path = os.path.join(base_dir, "tweet_eval", "hate", "train-00000-of-00001.parquet")
+    tweet_hate_path = os.path.join(base_dir, DatasetPaths.TWEET_EVAL_DIR, DatasetPaths.TWEET_EVAL_HATE_SUBDIR, DatasetPaths.TWEET_EVAL_FILE)
     if os.path.exists(tweet_hate_path):
         df_tweet = pd.read_parquet(tweet_hate_path)
 
-        if 'text' in df_tweet.columns and 'label' in df_tweet.columns:
-            df_tweet = df_tweet[['text', 'label']].dropna()
+        if DatasetColumns.TEXT_COL in df_tweet.columns and DatasetColumns.LABEL_COL in df_tweet.columns:
+            df_tweet = df_tweet[[DatasetColumns.TEXT_COL, DatasetColumns.LABEL_COL]].dropna()
             logger.info(f"Tweet hate loaded: {len(df_tweet)} samples")
             return df_tweet, 'tweet_hate'
         
         else:
-            logger.warning("Tweet hate: Expected 'text' and 'label' not found - skipping")
+            logger.warning(f"Tweet hate: Expected '{DatasetColumns.TEXT_COL}' and '{DatasetColumns.LABEL_COL}' not found - skipping")
 
     return None, None
 
 
-def load_toxicchat_dataset(base_dir="./data"):
+def load_toxicchat_dataset(base_dir=None):
     # load the toxic chat dataset from csv and find text and toxicity cols
+    if base_dir is None:
+        base_dir = PathConfig.BASE_DATA_DIR
 
-    toxic_path = os.path.join(base_dir, "toxicchat0124", "data", "0124", "toxic-chat_annotation_train.csv") #latest toxic chat data is 0124
+    toxic_path = os.path.join(base_dir, DatasetPaths.TOXICCHAT_DIR, DatasetPaths.HATE_SPEECH_SUBDIR, DatasetPaths.TOXICCHAT_VERSION, DatasetPaths.TOXICCHAT_FILE)
     if os.path.exists(toxic_path):
         df_toxic = pd.read_csv(toxic_path)
         text_col = find_text_column(df_toxic)
 
-        if text_col and 'toxicity' in df_toxic.columns:
-            df_toxic = df_toxic[[text_col, 'toxicity']].dropna()
-            df_toxic = df_toxic.rename(columns={text_col: 'text'})
+        if text_col and DatasetColumns.TOXICITY_COL in df_toxic.columns:
+            df_toxic = df_toxic[[text_col, DatasetColumns.TOXICITY_COL]].dropna()
+            df_toxic = df_toxic.rename(columns={text_col: DatasetColumns.TEXT_COL})
             logger.info(f"ToxicChat loaded: {len(df_toxic)} samples (text col: {text_col})")
             return df_toxic, 'toxicchat'
         
         else:
-            logger.warning(f"ToxicChat: No suitable text column or 'toxicity' missing - skipping. Columns were: {df_toxic.columns.tolist()}")
+            logger.warning(f"ToxicChat: No suitable text column or '{DatasetColumns.TOXICITY_COL}' missing - skipping. Columns were: {df_toxic.columns.tolist()}")
 
     else:
         logger.warning("ToxicChat train csv not found")
@@ -106,9 +112,12 @@ def load_toxicchat_dataset(base_dir="./data"):
     return None, None
 
 
-def load_jigsaw_dataset(base_dir="./data"):
+def load_jigsaw_dataset(base_dir=None):
     # load the jigsaw bias dataset
-    jigsaw_path = os.path.join(base_dir, "jigsaw_bias_mitigation", "train.csv")
+    if base_dir is None:
+        base_dir = PathConfig.BASE_DATA_DIR
+        
+    jigsaw_path = os.path.join(base_dir, DatasetPaths.JIGSAW_DIR, DatasetPaths.JIGSAW_FILE)
     if os.path.exists(jigsaw_path):
         df_jig = pd.read_csv(jigsaw_path)
         text_col = find_text_column(df_jig)
@@ -116,7 +125,7 @@ def load_jigsaw_dataset(base_dir="./data"):
 
         if text_col and toxicity_col:
             df_jig = df_jig[[text_col, toxicity_col]].dropna()
-            df_jig = df_jig.rename(columns={text_col: 'text', toxicity_col: 'toxicity'})
+            df_jig = df_jig.rename(columns={text_col: DatasetColumns.TEXT_COL, toxicity_col: DatasetColumns.TOXICITY_COL})
             logger.info(f"Jigsaw loaded: {len(df_jig)} samples")
             return df_jig, 'jigsaw'
         
@@ -126,8 +135,11 @@ def load_jigsaw_dataset(base_dir="./data"):
     return None, None
 
 
-def load_all_datasets(base_dir="./data"):
+def load_all_datasets(base_dir=None):
     # unifed function to all datasets
+    if base_dir is None:
+        base_dir = PathConfig.BASE_DATA_DIR
+        
     logger.info("Loading and preprocessing datasets...")
     
     loaders = [

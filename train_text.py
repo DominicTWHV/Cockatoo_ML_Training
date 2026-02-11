@@ -8,6 +8,7 @@ from train.metrics import compute_metrics
 from train.config import get_training_args
 from train.trainer import CustomTrainer
 from train.callbacks import LiveMetricsWebhookCallback
+from cockatoo_ml.registry import PathConfig, ModelConfig, WebhookConfig, CallbackConfig
 from logger.context import model_training_logger as logger
 
 
@@ -18,31 +19,23 @@ logger.info("Starting training script...")
 # entrypoint for model training
 def main():
     # load the preprocessed dataset
-    dataset = load_from_disk('data/processed_text')
+    dataset = load_from_disk(PathConfig.get_processed_data_path())
     logger.info(f"Dataset loaded. Train size: {len(dataset['train'])}")
     
     # init the tokenizer to tokenize the dataset
-    tokenizer = get_tokenizer("microsoft/deberta-v3-base")
+    tokenizer = get_tokenizer()
     
     # tokenize here
-    tokenized_dataset = tokenize_dataset(dataset, tokenizer, max_length=256)
+    tokenized_dataset = tokenize_dataset(dataset, tokenizer)
     
     # load model base for tuning
-    model = load_model("microsoft/deberta-v3-base", num_labels=4)
+    model = load_model()
     
     # compute pos weight for BCE loss
     pos_weight = compute_pos_weight(dataset['train'])
     
     # get training args
-    training_args = get_training_args(
-        output_dir='constellation_one_text',
-        logging_dir='constellation_one_logs',
-        num_train_epochs=3,
-        batch_size=24,
-        gradient_accumulation_steps=4,
-        learning_rate=2e-5,
-        use_fp16=True
-    )
+    training_args = get_training_args()
     
     # define trainer
     trainer = CustomTrainer(
@@ -56,20 +49,20 @@ def main():
     )
     
     # hook to metrics server for posting metrics
-    webhook_url = os.getenv("METRICS_WEBHOOK_URL", "https://api.cockatoo.dev/api/training/data")
-    trainer.add_callback(LiveMetricsWebhookCallback(
-        endpoint_url=webhook_url,
-        auth_token=os.getenv("METRICS_API_KEY"),
-        experiment_id="constellation-one-text-001"
-    ))
+    if WebhookConfig.enable: # only add callback if enabled in config
+        trainer.add_callback(LiveMetricsWebhookCallback(
+            endpoint_url=WebhookConfig.get_webhook_url(),
+            auth_token=WebhookConfig.get_api_key(),
+            experiment_id=CallbackConfig.DEFAULT_EXPERIMENT_ID
+        ))
     
     # start training
     logger.info("Starting training...")
     trainer.train()
     
     # save the trained model
-    trainer.save_model('constellation_one_text')
-    logger.info("Training finished. Model saved to: constellation_one_text")
+    trainer.save_model(PathConfig.MODEL_OUTPUT_DIR)
+    logger.info(f"Training finished. Model saved to: {PathConfig.MODEL_OUTPUT_DIR}")
     
     # evaluate the test set
     logger.info("Evaluating on test set...")

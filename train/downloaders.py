@@ -2,10 +2,16 @@ import os
 
 from huggingface_hub import snapshot_download
 
+from cockatoo_ml.registry import DatasetSources, PathConfig
 from logger.context import data_download_logger as logger
 
-def download_dataset(repo_id, local_subdir, base_dir="./data", repo_type="dataset"):
+def download_dataset(repo_id, local_subdir, base_dir=None, repo_type=None):
     # helper function to pull a dataset from hf hub and save to data folder
+    if base_dir is None:
+        base_dir = PathConfig.BASE_DATA_DIR
+    if repo_type is None:
+        repo_type = DatasetSources.REPO_TYPE
+    
     os.makedirs(base_dir, exist_ok=True)
     
     logger.info(f"Downloading {repo_id} to {local_subdir}...")
@@ -14,7 +20,7 @@ def download_dataset(repo_id, local_subdir, base_dir="./data", repo_type="datase
             repo_id=repo_id,
             repo_type=repo_type,
             local_dir=os.path.join(base_dir, local_subdir),
-            ignore_patterns=["*.gitattributes", "README.md"]
+            ignore_patterns=DatasetSources.IGNORE_PATTERNS
         )
         logger.info(f"Done: {repo_id}")
         return True
@@ -27,19 +33,8 @@ def download_all_datasets():
     # defines all sets and calls download helper, returns list of results
     logger.info("Starting dataset downloads for Constellation One moderation engine...")
     
-    datasets = [
-        ("ealvaradob/phishing-dataset", "phishing"),
-        ("ucberkeley-dlab/measuring-hate-speech", "hate_speech_measuring"),
-        ("cardiffnlp/tweet_eval", "tweet_eval"),
-        ("deepghs/nsfw_detect", "nsfw_detect"),
-        
-        ("lmsys/toxic-chat", "toxicchat0124"),
-        ("tasksource/jigsaw_toxicity", "jigsaw_bias_mitigation"),
-        ("KoalaAI/Text-Moderation-Multilingual", "multilingual_moderation"),
-    ]
-    
     results = []
-    for repo_id, local_subdir in datasets:
+    for repo_id, local_subdir in DatasetSources.DATASETS:
         success = download_dataset(repo_id, local_subdir)
         results.append((repo_id, success))
     

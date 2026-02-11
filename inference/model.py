@@ -3,11 +3,15 @@ from transformers import pipeline, AutoTokenizer, AutoModelForSequenceClassifica
 from typing import Dict
 from pathlib import Path
 
+from cockatoo_ml.registry import InferenceConfig, ModelConfig
 from logger.context import inference_api_server_logger as logger
 
 
 class ThreatClassifier:
-    def __init__(self, model_path: str = "constellation_one_text"):
+    def __init__(self, model_path: str = None):
+        if model_path is None:
+            model_path = InferenceConfig.DEFAULT_MODEL_PATH
+            
         self.device = 0 if torch.cuda.is_available() else -1
         logger.info(f"Loading model on device: {'cuda:0' if self.device == 0 else 'cpu'}")
 
@@ -19,7 +23,7 @@ class ThreatClassifier:
                 device=self.device,
                 torch_dtype=torch.float16 if self.device == 0 else None,  # memory saving on GPU
                 return_all_scores=True,
-                batch_size=8,  # good default for inference
+                batch_size=InferenceConfig.BATCH_SIZE,
             )
             logger.info("Pipeline loaded successfully")
 
@@ -55,7 +59,7 @@ class ThreatClassifier:
         try:
             if self.classifier is not None:
                 # predict results with model pipeline
-                raw_results = self.classifier(text, truncation=True, max_length=512)
+                raw_results = self.classifier(text, truncation=InferenceConfig.TRUNCATION, max_length=InferenceConfig.INFERENCE_MAX_LENGTH)
                 
                 # extract scores and map to labels
                 if isinstance(raw_results, list) and len(raw_results) > 0:
@@ -67,7 +71,7 @@ class ThreatClassifier:
                 
             else:
                 # manually handle tokenization and inference if pipeline failed to load
-                inputs = self.tokenizer(text, return_tensors="pt", truncation=True, max_length=512)
+                inputs = self.tokenizer(text, return_tensors="pt", truncation=InferenceConfig.TRUNCATION, max_length=InferenceConfig.INFERENCE_MAX_LENGTH)
                 if self.device == 0:
                     inputs = {k: v.cuda() for k, v in inputs.items()}
 
