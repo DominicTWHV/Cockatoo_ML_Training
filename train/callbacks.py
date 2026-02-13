@@ -39,7 +39,7 @@ class LiveMetricsWebhookCallback(TrainerCallback):
                 "global_step": state.global_step,
                 "epoch": state.epoch,
                 "metrics": latest_metrics,
-                "timestamp": datetime.now(timezone.utc).isoformat()
+                "timestamp": datetime.now(timezone.utc).replace(tzinfo=None)
             }
             
             self._send_metrics(payload)
@@ -51,7 +51,7 @@ class LiveMetricsWebhookCallback(TrainerCallback):
                 "global_step": state.global_step,
                 "epoch": state.epoch,
                 "metrics": metrics,
-                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "timestamp": datetime.now(timezone.utc).replace(tzinfo=None),
                 "is_eval": True
             }
             self._send_metrics(payload)
