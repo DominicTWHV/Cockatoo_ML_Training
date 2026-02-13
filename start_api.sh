@@ -18,6 +18,8 @@ echo "  POST /predict         - Single inference"
 echo "  POST /batch           - Batch inference"
 echo ""
 
+source venv/bin/activate
+
 hypercorn app:app \
   --bind "$HOST:$PORT" \
   --workers "$WORKERS" \
