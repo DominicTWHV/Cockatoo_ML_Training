@@ -36,6 +36,9 @@ class LiveMetricsWebhookCallback(TrainerCallback):
     def _send_metrics(self, endpoint_url: str, payload: dict):
         try:
             # dispatch metrics to api server
+
+            logger.info(f"Posting data to {endpoint_url}: {payload}")
+            
             r = requests.post(
                 endpoint_url, 
                 json=payload, 
