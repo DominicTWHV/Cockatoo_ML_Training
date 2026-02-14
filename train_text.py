@@ -1,3 +1,5 @@
+import argparse
+
 from dotenv import load_dotenv
 
 from datasets import load_from_disk
@@ -19,6 +21,20 @@ logger.info("Starting training script...")
 
 # entrypoint for model training
 def main():
+    parser = argparse.ArgumentParser(description="Train or evaluate the model")
+    parser.add_argument(
+        "--eval-only",
+        action="store_true",
+        help="Skip training and only run evaluation using the saved model.",
+    )
+    parser.add_argument(
+        "--eval-split",
+        default="test",
+        choices=["test", "validation"],
+        help="Dataset split to eval model on when --eval-only is set (default: test).",
+    )
+    args = parser.parse_args()
+
     # load the preprocessed dataset
     dataset = load_from_disk(PathConfig.get_processed_data_path())
     logger.info(f"Dataset loaded. Train size: {len(dataset['train'])}")
@@ -29,8 +45,13 @@ def main():
     # tokenize here
     tokenized_dataset = tokenize_dataset(dataset, tokenizer)
     
-    # load model base for tuning
-    model = load_model()
+    # load model base for tuning or the saved fine-tuned model for eval-only
+    if args.eval_only:
+        logger.info(f"Loading saved model from: {PathConfig.MODEL_OUTPUT_DIR}")
+        model = load_model(model_name=PathConfig.MODEL_OUTPUT_DIR)
+
+    else:
+        model = load_model()
     
     # compute pos weight for BCE loss
     pos_weight = compute_pos_weight(dataset['train'])
@@ -63,18 +84,23 @@ def main():
             enable_validation=WebhookConfig.enable_validation
         ))
     
-    # start training
-    logger.info("Starting training...")
-    trainer.train()
+    if not args.eval_only:
+        # start training
+        logger.info("Starting training...")
+        trainer.train()
+        
+        # save the trained model
+        trainer.save_model(PathConfig.MODEL_OUTPUT_DIR)
+        logger.info(f"Training finished. Model saved to: {PathConfig.MODEL_OUTPUT_DIR}")
+        
+    else:
+        logger.info("Eval-only mode enabled. Skipping training.")
     
-    # save the trained model
-    trainer.save_model(PathConfig.MODEL_OUTPUT_DIR)
-    logger.info(f"Training finished. Model saved to: {PathConfig.MODEL_OUTPUT_DIR}")
-    
-    # evaluate the test set
-    logger.info("Evaluating on test set...")
-    test_results = trainer.evaluate(tokenized_dataset['test'])
-    logger.info(f"Test results: {test_results}")
+    # evaluate the requested split
+    eval_split = args.eval_split
+    logger.info(f"Evaluating on {eval_split} set...")
+    test_results = trainer.evaluate(tokenized_dataset[eval_split])
+    logger.info(f"{eval_split.capitalize()} results: {test_results}")
 
     #done!
 
