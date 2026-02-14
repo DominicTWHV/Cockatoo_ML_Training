@@ -26,6 +26,7 @@ source venv/bin/activate
 pip install -r requirements.txt
 
 #install torch separately
+pip uninstall torch torchvision torchaudio -y # just in case torch exists in your old environment
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
 ```
 
