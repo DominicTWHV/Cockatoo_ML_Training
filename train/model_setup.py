@@ -8,9 +8,20 @@ from cockatoo_ml.logger.context import model_training_logger as logger
 
 def compute_pos_weight(dataset):
     # compute pos weight for BCE loss based on label distribution
-    all_labels = torch.cat([torch.tensor(l) for l in dataset['labels']])
-    pos_weight = (all_labels.numel() - all_labels.sum()) / (all_labels.sum() + ModelConfig.EPSILON)
-    logger.info(f"Positive weight (inverse frequency): {pos_weight:.2f}")
+    labels = torch.tensor(dataset['labels'], dtype=torch.float32)
+    if labels.ndim == 1:
+        labels = labels.unsqueeze(1)
+
+    num_samples = labels.shape[0]
+    pos_counts = labels.sum(dim=0)
+    neg_counts = num_samples - pos_counts
+
+    pos_weight = neg_counts / (pos_counts + ModelConfig.EPSILON)
+
+    # handle labels with zero positives to avoid exploding weights
+    pos_weight = torch.where(pos_counts > 0, pos_weight, torch.ones_like(pos_weight))
+
+    logger.info(f"Positive weights (per label): {pos_weight.tolist()}")
     return pos_weight
 
 
@@ -18,6 +29,7 @@ def load_model(model_name=None, num_labels=None):
     # load base model with torch float32 dtype
     if model_name is None:
         model_name = ModelConfig.BASE_MODEL_NAME
+        
     if num_labels is None:
         num_labels = ModelConfig.NUM_LABELS
         
