@@ -23,8 +23,7 @@ def create_preprocess_function(tokenizer, max_length=None):
             examples['text'],
             truncation=True,
             padding='max_length',
-            max_length=max_length,
-            return_tensors='pt'
+            max_length=max_length
         )
         tokenized['labels'] = torch.tensor(examples['labels'], dtype=torch.float)
         return tokenized
