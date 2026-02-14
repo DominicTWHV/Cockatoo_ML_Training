@@ -78,7 +78,7 @@ class ThreatClassifier:
                 with torch.no_grad():
                     logits = self.model(**inputs).logits
 
-                probs_raw = torch.softmax(logits, dim=-1).cpu().numpy()[0]
+                probs_raw = torch.sigmoid(logits).cpu().numpy()[0] # have to use sigmoid for multi-label classification to get probabilities
                 probs = {self.id2label.get(i, f"LABEL_{i}"): round(float(score), 4) for i, score in enumerate(probs_raw)}
 
             # construct response
