@@ -38,6 +38,9 @@ class MetricsConfig:
     
     # averaging strategy for multi-label metrics
     AVERAGE_STRATEGY = 'macro'
+
+    # exclude labels with zero support from macro averaging
+    INCLUDE_EMPTY_LABELS = False
     
     # zero division handling
 
