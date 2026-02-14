@@ -4,6 +4,10 @@ This repository is provided as a reference implementation for the training/infer
 
 [![CodeQL](https://github.com/DominicTWHV/Cockatoo_ML_Training/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/DominicTWHV/Cockatoo_ML_Training/actions/workflows/github-code-scanning/codeql)
 
+
+> [!Important]
+> This repository is highly experimental and is constantly being updated. It does not yet produce production-quality models. We are tinkering with different ideas and approaches, so expect breaking changes and refactors. We will eventually stabilize the codebase and produce production-ready models, but for now, this is a playground for us to experiment and iterate quickly.
+
 ---
 
 ## Training
