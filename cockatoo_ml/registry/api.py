@@ -23,14 +23,25 @@ class APIConfig:
 
 
 class WebhookConfig:
+    # enable training telemetry
     enable = False
+
+    # enable validation telemetry (sent to a separate endpoint)
+    enable_validation = False
 
     # default POST endpoint to send training telemetry to
     DEFAULT_WEBHOOK_URL = "https://yourdomain.com/<path>"
+
+    # default POST endpoint to send validation telemetry to
+    DEFAULT_VALIDATION_WEBHOOK_URL = "https://yourdomain.com/<validation-path>"
     
     @classmethod
     def get_webhook_url(cls):
         return os.getenv("METRICS_WEBHOOK_URL", cls.DEFAULT_WEBHOOK_URL)
+
+    @classmethod
+    def get_validation_webhook_url(cls):
+        return os.getenv("METRICS_VALIDATION_WEBHOOK_URL", cls.DEFAULT_VALIDATION_WEBHOOK_URL)
     
     @classmethod
     def get_api_key(cls):
