@@ -92,5 +92,5 @@ def print_dataset_stats(combined_df, dataset):
     # show distribution of labels
     train_df = dataset['train'].to_pandas()
     labels_flat = pd.Series([l for sublist in train_df[DatasetColumns.LABELS_COL] for l in sublist])
-    logger.info(f"Train class distribution ({'/'.join(LabelConfig.LABEL_NAMES)}):")
+    logger.info(f"Train class distribution ({'/'.join(LabelConfig.ACTIVE_LABELS)}):")
     logger.info(f"{labels_flat.value_counts()}")
