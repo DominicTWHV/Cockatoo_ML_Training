@@ -48,7 +48,8 @@ def combine_datasets(datasets):
     
     combined_df = pd.concat(labeled_dfs, ignore_index=True).dropna(subset=[DatasetColumns.TEXT_COL])
     combined_df[DatasetColumns.TEXT_COL] = combined_df[DatasetColumns.TEXT_COL].astype(str).str.strip()
-    combined_df = combined_df.drop_duplicates(subset=[DatasetColumns.TEXT_COL, DatasetColumns.LABELS_COL])
+    combined_df["_labels_tuple"] = combined_df[DatasetColumns.LABELS_COL].apply(tuple)
+    combined_df = combined_df.drop_duplicates(subset=[DatasetColumns.TEXT_COL, "_labels_tuple"]).drop(columns=["_labels_tuple"])
     
     return combined_df
 
