@@ -6,20 +6,38 @@ from cockatoo_ml.registry import CallbackConfig
 from cockatoo_ml.logger.context import model_training_logger as logger
 
 class LiveMetricsWebhookCallback(TrainerCallback):
-    # metrics hook callback to send training and evaluation metrics to a remote endpoint in real-time
+    # metrics hook callback to send training and evaluation metrics to remote endpoints in real-time
     
-    def __init__(self, endpoint_url: str, auth_token: str = None, experiment_id: str = None):
-        self.endpoint_url = endpoint_url
+    def __init__(
+        self,
+        training_endpoint_url: str = None,
+        validation_endpoint_url: str = None,
+
+        auth_token: str = None,
+
+        experiment_id: str = None,
+
+        enable_training: bool = False,
+        enable_validation: bool = False
+    ):
+        self.training_endpoint_url = training_endpoint_url
+        self.validation_endpoint_url = validation_endpoint_url
+
+        self.enable_training = enable_training
+        self.enable_validation = enable_validation
+
         self.headers = {"Content-Type": "application/json"}
+
         if auth_token:
             self.headers["Authorization"] = auth_token
+            
         self.experiment_id = experiment_id or CallbackConfig.DEFAULT_EXPERIMENT_ID
 
-    def _send_metrics(self, payload: dict):
+    def _send_metrics(self, endpoint_url: str, payload: dict):
         try:
             # dispatch metrics to api server
             r = requests.post(
-                self.endpoint_url, 
+                endpoint_url, 
                 json=payload, 
                 headers=self.headers, 
                 timeout=CallbackConfig.WEBHOOK_TIMEOUT
@@ -30,6 +48,9 @@ class LiveMetricsWebhookCallback(TrainerCallback):
             logger.warning(f"Failed to send metrics: {e}")
 
     def on_log(self, args, state, control, **kwargs):
+        if not self.enable_training or not self.training_endpoint_url:
+            return # only send metrics if training telemetry is enabled and endpoint is valid
+        
         if state.log_history:
             # grab most recent log entry
             latest_metrics = state.log_history[-1].copy()
@@ -42,9 +63,12 @@ class LiveMetricsWebhookCallback(TrainerCallback):
                 "timestamp": str(datetime.now(timezone.utc).replace(tzinfo=None))
             }
             
-            self._send_metrics(payload)
+            self._send_metrics(self.training_endpoint_url, payload)
 
     def on_evaluate(self, args, state, control, metrics=None, **kwargs):
+        if not self.enable_validation or not self.validation_endpoint_url:
+            return # only send metrics if validation telemetry is enabled and endpoint is valid
+        
         if metrics:
             payload = {
                 "experiment_id": self.experiment_id,
@@ -54,4 +78,4 @@ class LiveMetricsWebhookCallback(TrainerCallback):
                 "timestamp": str(datetime.now(timezone.utc).replace(tzinfo=None)),
                 "is_eval": True
             }
-            self._send_metrics(payload)
+            self._send_metrics(self.validation_endpoint_url, payload)
