@@ -1,14 +1,15 @@
 from dotenv import load_dotenv
-import os
 
 from datasets import load_from_disk
+
 from train.tokenization import get_tokenizer, tokenize_dataset
 from train.model_setup import load_model, compute_pos_weight
 from train.metrics import compute_metrics
 from train.config import get_training_args
 from train.trainer import CustomTrainer
 from train.callbacks import LiveMetricsWebhookCallback
-from cockatoo_ml.registry import PathConfig, ModelConfig, WebhookConfig, CallbackConfig
+
+from cockatoo_ml.registry import PathConfig, WebhookConfig, CallbackConfig
 from cockatoo_ml.logger.context import model_training_logger as logger
 
 
@@ -49,11 +50,17 @@ def main():
     )
     
     # hook to metrics server for posting metrics
-    if WebhookConfig.enable: # only add callback if enabled in config
+    if WebhookConfig.enable or WebhookConfig.enable_validation:  # only add callback if at least one is enabled
         trainer.add_callback(LiveMetricsWebhookCallback(
-            endpoint_url=WebhookConfig.get_webhook_url(),
+            training_endpoint_url=WebhookConfig.get_webhook_url(),
+            validation_endpoint_url=WebhookConfig.get_validation_webhook_url(),
+
             auth_token=WebhookConfig.get_api_key(),
-            experiment_id=CallbackConfig.DEFAULT_EXPERIMENT_ID
+
+            experiment_id=CallbackConfig.DEFAULT_EXPERIMENT_ID,
+            
+            enable_training=WebhookConfig.enable,
+            enable_validation=WebhookConfig.enable_validation
         ))
     
     # start training
