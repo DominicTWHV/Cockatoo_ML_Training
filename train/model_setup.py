@@ -2,7 +2,7 @@ import torch
 
 from transformers import AutoModelForSequenceClassification
 
-from cockatoo_ml.registry import ModelConfig
+from cockatoo_ml.registry import ModelConfig, LabelConfig
 from cockatoo_ml.logger.context import model_training_logger as logger
 
 
@@ -33,10 +33,15 @@ def load_model(model_name=None, num_labels=None):
     if num_labels is None:
         num_labels = ModelConfig.NUM_LABELS
         
+    label2id = {label: idx for idx, label in enumerate(LabelConfig.ACTIVE_LABELS)}
+    id2label = {idx: label for label, idx in label2id.items()}
+
     model = AutoModelForSequenceClassification.from_pretrained(
         model_name,
         num_labels=num_labels,
         problem_type=ModelConfig.PROBLEM_TYPE,
-        torch_dtype=torch.float32
+        torch_dtype=torch.float32,
+        label2id=label2id,
+        id2label=id2label,
     )
     return model
