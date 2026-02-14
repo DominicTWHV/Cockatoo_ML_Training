@@ -63,6 +63,26 @@ Run training loop:
 python3 train_text.py
 ```
 
+**Run Evaluation**
+
+*Note: The evaluation process is automatic when running a full training loop. The steps below are for evaluating a pre-existant model.*
+
+```bash
+python3 train_text.py --eval-only
+```
+
+This bypasses training and skips directly to loading a model from `PathConfig.MODEL_OUTPUT_DIR` and evaluate it against either the `test` (default) or `validation` dataset obtained earlier from pre-processing.
+
+This behavior can be manually defined with
+
+```bash
+python3 train_text.py --eval-only --eval-split test
+
+# or
+
+python3 train_text.py --eval-only --eval-split validation
+```
+
 **Metrics Telemetry**
 
 We have integrated a hook to push training data live to an API server. You can modify the settings in `cockatoo_ml/registry/api.py`. If your remote API server expects an authentication token, edit the `.env` file to include the token.
