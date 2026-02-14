@@ -10,7 +10,7 @@ This repository is provided as a reference implementation for the training/infer
 
 The training code is built around torch with a pipeline pulling datasets from Hugging Face and pushing metrics to a custom API server.
 
-We recommend running the training loop with a GPU-enabled device. Although training on CPU is possible without config changes, it will be significantly slower and would not be practical in this case (processed dataset size ~493 MB, CPU-based training can easily take multiple days to complete).
+We recommend running the training loop with a GPU-enabled device. Although training on CPU is possible without config changes, it will be significantly slower and would not be practical in this case (processed dataset size ~463 MB, CPU-based training can easily take multiple days to complete).
 
 You may follow these steps to run the training loop on your local machine:
 
