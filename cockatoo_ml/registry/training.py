@@ -51,7 +51,7 @@ class CallbackConfig:
     #these are used in conjunction with cockatoo_ml/registry/api.py WebhookConfig for reporting training telemetry to external services
 
     # default experiment identifier
-    DEFAULT_EXPERIMENT_ID = "constellation-one-text-001"
+    DEFAULT_EXPERIMENT_ID = "constellation-one-text-002"
     
     # request timeout for webhook callbacks
     WEBHOOK_TIMEOUT = 5

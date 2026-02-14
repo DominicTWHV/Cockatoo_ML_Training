@@ -24,16 +24,16 @@ class APIConfig:
 
 class WebhookConfig:
     # enable training telemetry
-    enable = False
+    enable = True
 
     # enable validation telemetry (sent to a separate endpoint)
-    enable_validation = False
+    enable_validation = True
 
     # default POST endpoint to send training telemetry to
-    DEFAULT_WEBHOOK_URL = "https://yourdomain.com/<path>"
+    DEFAULT_WEBHOOK_URL = "https://api.cockatoo.dev/api/training/data"
 
     # default POST endpoint to send validation telemetry to
-    DEFAULT_VALIDATION_WEBHOOK_URL = "https://yourdomain.com/<validation-path>"
+    DEFAULT_VALIDATION_WEBHOOK_URL = "https://api.cockatoo.dev/api/evaluation/data"
     
     @classmethod
     def get_webhook_url(cls):
