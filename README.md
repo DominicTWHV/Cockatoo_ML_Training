@@ -65,22 +65,22 @@ python3 train_text.py
 
 **Run Evaluation**
 
-*Note: The evaluation process is automatic when running a full training loop. The steps below are for evaluating a pre-existant model.*
+*Note: The evaluation process is automatic when running a full training loop. The steps below are for evaluating a pre-existing model.*
 
 ```bash
 python3 train_text.py --eval-only
 ```
 
-This bypasses training and skips directly to loading a model from `PathConfig.MODEL_OUTPUT_DIR` and evaluate it against either the `test` (default) or `validation` dataset obtained earlier from pre-processing.
+This bypasses training and skips directly to loading a model from `PathConfig.MODEL_OUTPUT_DIR` and evaluating it against either the `test` (default) or `validation` dataset obtained earlier from pre-processing.
 
 This behavior can be manually defined with
 
 ```bash
-python3 train_text.py --eval-only --eval-split test
+python3 train_text.py --eval-only --eval-split test #for testing against the test split
 
 # or
 
-python3 train_text.py --eval-only --eval-split validation
+python3 train_text.py --eval-only --eval-split validation #for testing against the validation split
 ```
 
 **Metrics Telemetry**
@@ -93,6 +93,8 @@ The telemetry hook can be enabled independently for training and validation:
 - Validation telemetry: `WebhookConfig.enable_validation` (uses `METRICS_VALIDATION_WEBHOOK_URL`)
 
 This is the telemetry system we use at [cockatoo.dev](https://cockatoo.dev/ml-training.html) to monitor and publish training data across all our models in one place.
+
+*Note: This telemetry is not something that sends us information. It is a system that you can use to send live training data to your own servers.*
 
 **Telemetry API Output**
 
