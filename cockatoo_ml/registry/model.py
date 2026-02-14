@@ -1,10 +1,13 @@
+from .labels import LabelConfig
+
 class ModelConfig:
     
     # base model identifier from HuggingFace
     BASE_MODEL_NAME = "microsoft/deberta-v3-base"
     
     # number of output labels for multi-label classification
-    NUM_LABELS = 4
+    # derived from active labels for this use case
+    NUM_LABELS = len(LabelConfig.ACTIVE_LABELS)
     
     # problem type for model
     PROBLEM_TYPE = "multi_label_classification"
