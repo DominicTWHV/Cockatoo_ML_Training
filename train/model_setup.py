@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 
-from transformers import AutoModelForSequenceClassification, CLIPModel, CLIPConfig
+from transformers import AutoModelForSequenceClassification, CLIPModel
 
 from cockatoo_ml.registry import ModelConfig, LabelConfig, ModelType
 from cockatoo_ml.logger.context import model_training_logger as logger
