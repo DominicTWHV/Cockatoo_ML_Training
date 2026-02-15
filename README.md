@@ -10,11 +10,30 @@ This repository is provided as a reference implementation for the training/infer
 
 ---
 
+## Model Architecture
+
+**Current Default: CLIP ViT-L-14**
+
+This codebase now defaults to training **CLIP ViT-L-14** for multi-modal content classification. The model can process:
+- Text-only inputs
+- Text + image inputs
+
+**Also Supported: DeBERTa V3**
+
+DeBERTa V3 text classification is still supported through configuration. To switch to DeBERTa:
+
+1. Edit `cockatoo_ml/registry/model.py`
+2. Change `MODEL_TYPE = ModelType.CLIP_VIT` to `MODEL_TYPE = ModelType.DEBERTA`
+
+The codebase will automatically adapt to use the appropriate model architecture, tokenization, and training parameters.
+
+---
+
 ## Training
 
 The training code is built around torch with a pipeline pulling datasets from Hugging Face and pushing metrics to a custom API server.
 
-We recommend running the training loop with a GPU-enabled device. Although training on CPU is possible without config changes, it will be significantly slower and would not be practical in this case (processed dataset size ~463 MB, CPU-based training can easily take multiple days to complete).
+We recommend running the training loop with a GPU-enabled device. Although training on CPU is possible without config changes, it will be significantly slower and would not be practical in this case (CLIP ViT-L-14 is a large model, CPU-based training can take weeks).
 
 You may follow these steps to run the training loop on your local machine:
 
@@ -59,7 +78,14 @@ python3 prepare_data.py
 ```
 
 > [!Important]
-> Before you start the training loop, please review the trainer configs at `cockatoo_ml/registry/training.py` and adjust them as needed. For example, if you run into OOM errors, you may want to reduce the batch size, or increase it if you desire a faster training speed and have the hardware to support it.
+> Before you start the training loop, please review the trainer configs at `cockatoo_ml/registry/training.py` and adjust them as needed. 
+> 
+> **CLIP Training Notes:**
+> - Default batch size is 16 (reduced from 24 for DeBERTa due to larger model size)
+> - Learning rate is 1e-5 (lower than DeBERTa's 2e-5 for stability)
+> - Gradient accumulation steps increased to 6 to maintain effective batch size
+> - If you run into OOM errors, reduce batch size or increase gradient accumulation
+> - CLIP benefits from mixed precision training (FP16 enabled by default)
 
 Run training loop:
 
