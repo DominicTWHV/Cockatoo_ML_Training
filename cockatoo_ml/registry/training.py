@@ -1,10 +1,10 @@
 class TrainingConfig:
     
-    # training hyperparameters
+    # training hyperparameters (currently optimized for CLIP)
     NUM_EPOCHS = 3
-    BATCH_SIZE = 24
-    GRADIENT_ACCUMULATION_STEPS = 4
-    LEARNING_RATE = 2e-5
+    BATCH_SIZE = 16  # increase for DeBERTa as CLIP is a bigger model
+    GRADIENT_ACCUMULATION_STEPS = 6  # reduce to something like 4 for DeBERTa
+    LEARNING_RATE = 1e-5  # lower LR for CLIP (was 2e-5 for DeBERTa)
     WEIGHT_DECAY = 0.01
     WARMUP_RATIO = 0.1
     
