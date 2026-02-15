@@ -9,27 +9,50 @@ from cockatoo_ml.logger.context import data_processing_logger as logger
 # the data processor takes in the loaded datasets, applies appropriate labels, combines them, and splits into train/val/test sets for training
 def apply_labels_by_type(df, dataset_type):
     # apply appropriate labeling logic based on dataset type and return dataframe with text and labels columns
+    
     if dataset_type == DatasetTypeConfig.PHISHING:
         df[DatasetColumns.LABELS_COL] = [LabelConfig.scam_label() for _ in range(len(df))]
-        return df[[DatasetColumns.TEXT_COL, DatasetColumns.LABELS_COL]]
+        cols_to_keep = [DatasetColumns.TEXT_COL, DatasetColumns.LABELS_COL]
+        # include image column if present
+
+        if 'image' in df.columns:
+            cols_to_keep.append('image')
+            
+        return df[cols_to_keep]
     
     elif dataset_type == DatasetTypeConfig.HATE_SPEECH:
         df['harassment'] = (df[DatasetColumns.HATE_SPEECH_SCORE_COL] > LabelConfig.HATE_SPEECH_THRESHOLD).astype(int)
         df[DatasetColumns.LABELS_COL] = df['harassment'].apply(lambda x: LabelConfig.make_labels(harassment=x))
-        return df[[DatasetColumns.TEXT_COL, DatasetColumns.LABELS_COL]]
+        cols_to_keep = [DatasetColumns.TEXT_COL, DatasetColumns.LABELS_COL]
+        if 'image' in df.columns:
+            cols_to_keep.append('image')
+
+        return df[cols_to_keep]
     
     elif dataset_type == DatasetTypeConfig.TWEET_HATE:
         df[DatasetColumns.LABELS_COL] = df[DatasetColumns.LABEL_COL].apply(lambda x: LabelConfig.make_labels(harassment=x))
-        return df[[DatasetColumns.TEXT_COL, DatasetColumns.LABELS_COL]]
+        cols_to_keep = [DatasetColumns.TEXT_COL, DatasetColumns.LABELS_COL]
+        if 'image' in df.columns:
+            cols_to_keep.append('image')
+
+        return df[cols_to_keep]
     
     elif dataset_type == DatasetTypeConfig.TOXICCHAT:
         df[DatasetColumns.LABELS_COL] = df[DatasetColumns.TOXICITY_COL].apply(lambda x: LabelConfig.make_labels(harassment=x))
-        return df[[DatasetColumns.TEXT_COL, DatasetColumns.LABELS_COL]]
+        cols_to_keep = [DatasetColumns.TEXT_COL, DatasetColumns.LABELS_COL]
+        if 'image' in df.columns:
+            cols_to_keep.append('image')
+
+        return df[cols_to_keep]
     
     elif dataset_type == DatasetTypeConfig.JIGSAW:
         df['harassment'] = (df[DatasetColumns.TOXICITY_COL] > LabelConfig.TOXICITY_THRESHOLD).astype(int)
         df[DatasetColumns.LABELS_COL] = df['harassment'].apply(lambda x: LabelConfig.make_labels(harassment=x))
-        return df[[DatasetColumns.TEXT_COL, DatasetColumns.LABELS_COL]]
+        cols_to_keep = [DatasetColumns.TEXT_COL, DatasetColumns.LABELS_COL]
+        if 'image' in df.columns:
+            cols_to_keep.append('image')
+            
+        return df[cols_to_keep]
     
     else:
         raise ValueError(f"Unknown dataset type: {dataset_type}")
