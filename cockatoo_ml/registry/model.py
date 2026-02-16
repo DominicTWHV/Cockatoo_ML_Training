@@ -19,7 +19,13 @@ class ModelConfig:
     # DeBERTa V3 configuration
     DEBERTA_MODEL_NAME = "microsoft/deberta-v3-base"
     DEBERTA_MAX_TOKEN_LENGTH = 256
-    DEBERTA_MAX_INFERENCING_TOKEN_LENGTH = 256  # allow longer inputs when inferencing? (experimenta)
+    DEBERTA_MAX_INFERENCING_TOKEN_LENGTH = 256  # allow longer inputs when inferencing? (experimental)
+
+    # epsilon for numerical stability
+    EPSILON = 1e-6
+
+    # ---------- Automatically derived settings below ---------
+    # Generally there should be no need to go below this line (within this class). The config options below are automatically derived from inputs above.
     
     # dynamic base model name based on model type
     @classmethod
@@ -54,14 +60,10 @@ class ModelConfig:
             return cls.DEBERTA_MAX_TOKEN_LENGTH
         
         else:
-            return 256
+            return 256 # default fallback (should never be used if the model is properly configured)
 
     # max sequence length for inference
     INFERENCE_MAX_LENGTH = CLIP_MAX_INFERENCING_TOKEN_LENGTH if MODEL_TYPE == ModelType.CLIP_VIT else DEBERTA_MAX_INFERENCING_TOKEN_LENGTH
-    
-    # epsilon for numerical stability
-    EPSILON = 1e-6
-
 
 class InferenceConfig:
 
