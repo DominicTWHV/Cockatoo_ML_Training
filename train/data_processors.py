@@ -71,10 +71,74 @@ def combine_datasets(datasets):
     
     combined_df = pd.concat(labeled_dfs, ignore_index=True).dropna(subset=[DatasetColumns.TEXT_COL])
     combined_df[DatasetColumns.TEXT_COL] = combined_df[DatasetColumns.TEXT_COL].astype(str).str.strip()
-    combined_df["_labels_tuple"] = combined_df[DatasetColumns.LABELS_COL].apply(tuple)
-    combined_df = combined_df.drop_duplicates(subset=[DatasetColumns.TEXT_COL, "_labels_tuple"]).drop(columns=["_labels_tuple"])
+
+    # data deduplication based on hash
+    pre_dedupe_count = len(combined_df)
+    labels_tuple = combined_df[DatasetColumns.LABELS_COL].map(tuple)
+    dedupe_hash = pd.util.hash_pandas_object(
+        pd.DataFrame({
+            DatasetColumns.TEXT_COL: combined_df[DatasetColumns.TEXT_COL],
+            "_labels_tuple": labels_tuple
+        }),
+        index=False
+    )
+    combined_df = combined_df.loc[~dedupe_hash.duplicated()].reset_index(drop=True)
+    post_dedupe_count = len(combined_df)
+
+    if pre_dedupe_count != post_dedupe_count:
+        # pre_dedupe_count - post_dedupe_count gives number of duplicates removed, and we log the percentage of duplicates removed
+        logger.info(f"Deduplicated {pre_dedupe_count - post_dedupe_count} entries (kept {post_dedupe_count}/{pre_dedupe_count})")
+    
+    else:
+        logger.info(f"No duplicates found (kept {post_dedupe_count}/{pre_dedupe_count})")
     
     return combined_df
+
+
+def _rebalance_training_split(train_df, random_state):
+    logger.info("Rebalancing training split...")
+
+    # upsample minority label combinations to match the majority class
+    labels_tuple = train_df[DatasetColumns.LABELS_COL].map(tuple)
+    train_df = train_df.copy()
+    train_df["_labels_tuple"] = labels_tuple
+
+    counts = train_df["_labels_tuple"].value_counts()
+    if counts.empty:
+        return train_df.drop(columns=["_labels_tuple"])
+
+    max_count = counts.max()
+    pre_rebalance_total = len(train_df)
+    logger.info("Training split label-combo distribution before rebalance:")
+    logger.info(f"{counts.to_dict()}")
+    rebalanced_parts = []
+
+    for label_combo, combo_count in counts.items():
+        combo_df = train_df[train_df["_labels_tuple"] == label_combo]
+
+        if combo_count < max_count:
+            extra = combo_df.sample(
+                n=max_count - combo_count,
+                replace=True,
+                random_state=random_state
+            )
+            combo_df = pd.concat([combo_df, extra], ignore_index=True)
+            
+        rebalanced_parts.append(combo_df)
+
+    rebalanced_df = pd.concat(rebalanced_parts, ignore_index=True)
+    rebalanced_df = rebalanced_df.drop(columns=["_labels_tuple"]).sample(frac=1.0, random_state=random_state).reset_index(drop=True)
+
+    post_rebalance_total = len(rebalanced_df)
+    added = post_rebalance_total - pre_rebalance_total
+
+    post_counts = rebalanced_df[DatasetColumns.LABELS_COL].map(tuple).value_counts() #compute new distribution after rebalance
+
+    logger.info(f"Rebalanced training split: added {added} samples to match max class size of {max_count}")
+    logger.info("Training split label-combo distribution after rebalance:")
+    logger.info(f"{post_counts.to_dict()}")
+    
+    return rebalanced_df
 
 
 def split_dataset(combined_df, test_size=None, val_size=None, random_state=None):
@@ -92,6 +156,10 @@ def split_dataset(combined_df, test_size=None, val_size=None, random_state=None)
         random_state=random_state, 
         stratify=combined_df[DatasetColumns.LABELS_COL].apply(tuple)
     )
+
+    if DataSplitConfig.REBALANCE_TRAINING_DATA:
+        logger.info("Rebalancing training split to mitigate class imbalance")
+        train_df = _rebalance_training_split(train_df, random_state)
     
     val_df, test_df = train_test_split(
         temp_df, 
