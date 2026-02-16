@@ -241,3 +241,10 @@ def print_dataset_stats(combined_df, dataset):
     labels_flat = pd.Series([l for sublist in train_df[DatasetColumns.LABELS_COL] for l in sublist])
     logger.info(f"Train class distribution ({'/'.join(LabelConfig.ACTIVE_LABELS)}):")
     logger.info(f"{labels_flat.value_counts()}")
+
+    # per-label positive counts and rates
+    label_matrix = pd.DataFrame(train_df[DatasetColumns.LABELS_COL].tolist(), columns=LabelConfig.ACTIVE_LABELS)
+    positives = label_matrix.sum().astype(int)
+    rates = (label_matrix.mean() * 100).round(2)
+    logger.info(f"Train positive counts by label: {positives.to_dict()}")
+    logger.info(f"Train positive rates by label (%): {rates.to_dict()}")
