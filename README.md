@@ -65,7 +65,7 @@ You should see your GPU being listed in the output along with the number of CUDA
 
 Load dataset from Hugging Face:
 
-*If it fails, you may have to log into the Hugging Face CLI with `huggingface-cli login`*
+*If it fails, you may have to log into the Hugging Face CLI with `huggingface-cli login` or `hf auth login` (newer)*
 
 ```bash
 python3 download_data.py
