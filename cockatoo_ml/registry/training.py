@@ -1,17 +1,49 @@
+from .model import ModelConfig, ModelType
+
+class ModelTrainingConfig:
+    # hyperparameters for training, enables bulk value swapping for different models
+    # configure which set to use in cockatoo_ml/registry/model.py ModelConfig.MODEL_TYPE
+
+    # --- CLIP hyperparams
+    
+    CLIP_NUM_EPOCHS = 3
+    CLIP_BATCH_SIZE = 16  # CLIP is a larger model
+    CLIP_GRADIENT_ACCUMULATION_STEPS = 6 
+    CLIP_LEARNING_RATE = 1e-5  # lower LR for CLIP
+    CLIP_WEIGHT_DECAY = 0.01
+    CLIP_WARMUP_RATIO = 0.1
+
+    CLIP_USE_FP16 = True
+    CLIP_USE_BF16 = False  # older hardware, no modern api support
+    CLIP_USE_TF32 = False
+
+    # --- DeBERTa hyperparams
+
+    DEBERTA_NUM_EPOCHS = 3
+    DEBERTA_BATCH_SIZE = 24
+    DEBERTA_GRADIENT_ACCUMULATION_STEPS = 4
+    DEBERTA_LEARNING_RATE = 2e-5
+    DEBERTA_WEIGHT_DECAY = 0.01
+    DEBERTA_WARMUP_RATIO = 0.1
+
+    DEBERTA_USE_FP16 = True
+    DEBERTA_USE_BF16 = False  # older hardware, no modern api support
+    DEBERTA_USE_TF32 = False
+
 class TrainingConfig:
     
-    # training hyperparameters (currently optimized for CLIP)
-    NUM_EPOCHS = 3
-    BATCH_SIZE = 16  # increase for DeBERTa as CLIP is a bigger model
-    GRADIENT_ACCUMULATION_STEPS = 6  # reduce to something like 4 for DeBERTa
-    LEARNING_RATE = 1e-5  # lower LR for CLIP (was 2e-5 for DeBERTa)
-    WEIGHT_DECAY = 0.01
-    WARMUP_RATIO = 0.1
+    # training hyperparameters (derived from ModelTrainingConfig and ModelConfig)
+    NUM_EPOCHS = ModelTrainingConfig.CLIP_NUM_EPOCHS if ModelConfig.MODEL_TYPE == ModelType.CLIP_VIT else ModelTrainingConfig.DEBERTA_NUM_EPOCHS
+    BATCH_SIZE = ModelTrainingConfig.CLIP_BATCH_SIZE if ModelConfig.MODEL_TYPE == ModelType.CLIP_VIT else ModelTrainingConfig.DEBERTA_BATCH_SIZE
+    GRADIENT_ACCUMULATION_STEPS = ModelTrainingConfig.CLIP_GRADIENT_ACCUMULATION_STEPS if ModelConfig.MODEL_TYPE == ModelType.CLIP_VIT else ModelTrainingConfig.DEBERTA_GRADIENT_ACCUMULATION_STEPS
+    LEARNING_RATE = ModelTrainingConfig.CLIP_LEARNING_RATE if ModelConfig.MODEL_TYPE == ModelType.CLIP_VIT else ModelTrainingConfig.DEBERTA_LEARNING_RATE
+    WEIGHT_DECAY = ModelTrainingConfig.CLIP_WEIGHT_DECAY if ModelConfig.MODEL_TYPE == ModelType.CLIP_VIT else ModelTrainingConfig.DEBERTA_WEIGHT_DECAY
+    WARMUP_RATIO = ModelTrainingConfig.CLIP_WARMUP_RATIO if ModelConfig.MODEL_TYPE == ModelType.CLIP_VIT else ModelTrainingConfig.DEBERTA_WARMUP_RATIO
     
     # precision
-    USE_FP16 = True
-    USE_BF16 = False  # older hardware, no modern api support
-    USE_TF32 = False
+    USE_FP16 = ModelTrainingConfig.CLIP_USE_FP16 if ModelConfig.MODEL_TYPE == ModelType.CLIP_VIT else ModelTrainingConfig.DEBERTA_USE_FP16
+    USE_BF16 = ModelTrainingConfig.CLIP_USE_BF16 if ModelConfig.MODEL_TYPE == ModelType.CLIP_VIT else ModelTrainingConfig.DEBERTA_USE_BF16
+    USE_TF32 = ModelTrainingConfig.CLIP_USE_TF32 if ModelConfig.MODEL_TYPE == ModelType.CLIP_VIT else ModelTrainingConfig.DEBERTA_USE_TF32
     
     # eval and logging
     EVAL_STRATEGY = 'epoch'
