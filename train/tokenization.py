@@ -1,6 +1,7 @@
 import torch
 
 from transformers import AutoTokenizer, CLIPProcessor
+
 from PIL import Image
 
 from cockatoo_ml.registry import ModelConfig, ModelType

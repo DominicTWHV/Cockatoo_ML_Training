@@ -1,6 +1,7 @@
 import pandas as pd
 
 from datasets import Dataset, DatasetDict
+
 from sklearn.model_selection import train_test_split
 
 from cockatoo_ml.registry import LabelConfig, DatasetTypeConfig, DataSplitConfig, DatasetColumns
