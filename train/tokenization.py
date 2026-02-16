@@ -8,11 +8,10 @@ from cockatoo_ml.logger.context import data_processing_logger as logger
 
 
 def get_tokenizer(model_name=None, model_type=None):
-    """
-    Load tokenizer/processor based on model type.
-    For CLIP: returns CLIPProcessor
-    For DeBERTa: returns AutoTokenizer
-    """
+    # load tokenizer or processor based on ModelConfig.MODEL_TYPE
+    # For CLIP: returns CLIPProcessor
+    # For DeBERTa: returns AutoTokenizer
+
     if model_type is None:
         model_type = ModelConfig.MODEL_TYPE
         
@@ -22,19 +21,20 @@ def get_tokenizer(model_name=None, model_type=None):
     if model_type == ModelType.CLIP_VIT:
         logger.info(f"Loading CLIP processor for {model_name}")
         return CLIPProcessor.from_pretrained(model_name)
+    
     elif model_type == ModelType.DEBERTA:
         logger.info(f"Loading tokenizer for {model_name}")
         return AutoTokenizer.from_pretrained(model_name)
+    
     else:
         raise ValueError(f"Unknown model type: {model_type}")
 
 
 def create_preprocess_function(tokenizer, max_length=None, model_type=None):
-    """
-    Create preprocessing function based on model type.
-    CLIP: processes both text and optional images
-    DeBERTa: processes text only
-    """
+    # create preprocessing function based on model type.
+    # CLIP: processes both text and optional images
+    # DeBERTa: processes text only
+
     if model_type is None:
         model_type = ModelConfig.MODEL_TYPE
         
