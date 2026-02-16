@@ -12,13 +12,14 @@ class ModelConfig:
     # CLIP ViT-L-14 configuration
     CLIP_MODEL_NAME = "openai/clip-vit-large-patch14"
     CLIP_IMAGE_SIZE = 224
-    CLIP_EMBEDDING_DIM = 768
     CLIP_PROJECTION_DIM = 768  # for classification head
     CLIP_MAX_TOKEN_LENGTH = 77  # CLIP's max token length for text inputs
+    CLIP_MAX_INFERENCING_TOKEN_LENGTH = 77  # allow longer inputs for inferencing? (experimental)
     
     # DeBERTa V3 configuration
     DEBERTA_MODEL_NAME = "microsoft/deberta-v3-base"
     DEBERTA_MAX_TOKEN_LENGTH = 256
+    DEBERTA_MAX_INFERENCING_TOKEN_LENGTH = 256  # allow longer inputs when inferencing? (experimenta)
     
     # dynamic base model name based on model type
     @classmethod
@@ -54,12 +55,9 @@ class ModelConfig:
         
         else:
             return 256
-    
-    # Static default for backwards compatibility
-    MAX_TOKEN_LENGTH = 77  # CLIP default
 
     # max sequence length for inference
-    INFERENCE_MAX_LENGTH = 512
+    INFERENCE_MAX_LENGTH = CLIP_MAX_INFERENCING_TOKEN_LENGTH if MODEL_TYPE == ModelType.CLIP_VIT else DEBERTA_MAX_INFERENCING_TOKEN_LENGTH
     
     # epsilon for numerical stability
     EPSILON = 1e-6
