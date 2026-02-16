@@ -9,6 +9,7 @@ def download_dataset(repo_id, local_subdir, base_dir=None, repo_type=None):
     # helper function to pull a dataset from hf hub and save to data folder
     if base_dir is None:
         base_dir = PathConfig.BASE_DATA_DIR
+        
     if repo_type is None:
         repo_type = DatasetSources.REPO_TYPE
     
@@ -24,6 +25,7 @@ def download_dataset(repo_id, local_subdir, base_dir=None, repo_type=None):
         )
         logger.info(f"Done: {repo_id}")
         return True
+    
     except Exception as e:
         logger.error(f"Failed to download {repo_id}: {e}")
         return False

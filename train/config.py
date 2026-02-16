@@ -14,16 +14,22 @@ def get_training_args(
     # Use registry defaults if not provided
     if output_dir is None:
         output_dir = PathConfig.MODEL_OUTPUT_DIR
+
     if logging_dir is None:
         logging_dir = PathConfig.LOGGING_DIR
+
     if num_train_epochs is None:
         num_train_epochs = TrainingConfig.NUM_EPOCHS
+
     if batch_size is None:
         batch_size = TrainingConfig.BATCH_SIZE
+
     if gradient_accumulation_steps is None:
         gradient_accumulation_steps = TrainingConfig.GRADIENT_ACCUMULATION_STEPS
+
     if learning_rate is None:
         learning_rate = TrainingConfig.LEARNING_RATE
+        
     if use_fp16 is None:
         use_fp16 = TrainingConfig.USE_FP16
 
