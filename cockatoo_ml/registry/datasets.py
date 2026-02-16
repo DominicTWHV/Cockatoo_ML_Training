@@ -1,3 +1,5 @@
+import random
+
 class DatasetSources:
     # huggingface datasets we download, for more info, see datasets.md
     
@@ -65,4 +67,8 @@ class DataSplitConfig:
     VAL_SIZE = 0.5  # Split from the test portion
     
     # random seed for reproducibility
-    RANDOM_STATE = 42
+    RANDOM_STATE = 42 #or use random.randint(0, 10000) for non-deterministic splits
+
+    # optional class rebalancing (applies to training split only)
+    # when enabled, minority label combinations are upsampled to match the majority
+    REBALANCE_TRAINING_DATA = True
