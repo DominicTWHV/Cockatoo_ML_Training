@@ -95,4 +95,4 @@ class DataDedupConfig:
     #   pros: eliminates all label conflicts, model learns only clear-cut cases, zero ambiguity
     #   cons: may lose a lot of data
     
-    SAME_TEXT_DIFFERENT_LABELS = "drop_conflicts"
+    SAME_TEXT_DIFFERENT_LABELS = "keep_first"
