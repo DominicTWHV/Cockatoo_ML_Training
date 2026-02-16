@@ -1,7 +1,7 @@
 from .colors import bcolors
 from .model import ModelConfig, InferenceConfig, ModelType
 from .training import TrainingConfig, MetricsConfig, CallbackConfig
-from .datasets import DatasetSources, DatasetPaths, DatasetColumns, DataSplitConfig
+from .datasets import DatasetSources, DatasetPaths, DatasetColumns, DataSplitConfig, DataDedupConfig
 from .labels import LabelConfig, DatasetTypeConfig
 from .paths import PathConfig
 from .api import APIConfig, WebhookConfig
@@ -18,6 +18,7 @@ __all__ = [
     'DatasetPaths',
     'DatasetColumns',
     'DataSplitConfig',
+    'DataDedupConfig',
     'LabelConfig',
     'DatasetTypeConfig',
     'PathConfig',

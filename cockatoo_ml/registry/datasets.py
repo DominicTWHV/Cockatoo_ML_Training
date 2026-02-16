@@ -72,3 +72,27 @@ class DataSplitConfig:
     # optional class rebalancing (applies to training split only)
     # when enabled, minority label combinations are upsampled to match the majority
     REBALANCE_TRAINING_DATA = True
+
+
+class DataDedupConfig:
+    # policy for handling same normalized text appearing with different labels
+    # options: "keep_all", "keep_first", "merge_labels", "drop_conflicts"
+
+    # when to use:
+    # keep_all: preserves all label combos for same text across different sets
+    #   pros: retains all data
+    #   cons: may introduce noise/conflicts, model sees same text with different labels and can be confused (but may also learn more nuanced patterns)
+
+    # keep_first: keeps first occurrence of text and its labels, drops other combos
+    #   pros: simple, reduces noise, model learns one label combo per text
+    #   cons: may lose valuable data, model doesn't learn that same text can have different meanings
+
+    # merge_labels: merges all labels for same text into a single row with combined labels
+    #   pros: retains all data, model learns all label combos for same text
+    #   cons: may create very complex label combinations that are hard for model to learn, can also cause problems if the labels are mutually exclusive (e.g. both toxic and non-toxic)
+
+    # drop_conflicts: drops any text that appears with multiple distinct label sets
+    #   pros: eliminates all label conflicts, model learns only clear-cut cases, zero ambiguity
+    #   cons: may lose a lot of data
+    
+    SAME_TEXT_DIFFERENT_LABELS = "drop_conflicts"

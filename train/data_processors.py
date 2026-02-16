@@ -4,7 +4,7 @@ from datasets import Dataset, DatasetDict
 
 from sklearn.model_selection import train_test_split
 
-from cockatoo_ml.registry import LabelConfig, DatasetTypeConfig, DataSplitConfig, DatasetColumns
+from cockatoo_ml.registry import LabelConfig, DatasetTypeConfig, DataSplitConfig, DatasetColumns, DataDedupConfig
 from cockatoo_ml.logger.context import data_processing_logger as logger
 
 # the data processor takes in the loaded datasets, applies appropriate labels, combines them, and splits into train/val/test sets for training
@@ -58,11 +58,12 @@ def apply_labels_by_type(df, dataset_type):
     else:
         raise ValueError(f"Unknown dataset type: {dataset_type}")
 
-
 def combine_datasets(datasets):
-    # combine all datasets into a single dataframe
+    # combine the datasets into one dataframe, applying appropriate labels and handling duplicates
+
     labeled_dfs = []
     
+    # collect and label each dataframe
     for df, dataset_type in datasets:
         labeled_df = apply_labels_by_type(df, dataset_type)
         labeled_dfs.append(labeled_df)
@@ -70,26 +71,78 @@ def combine_datasets(datasets):
     if not labeled_dfs:
         return None
     
+    # concat and cleanup the combined dataframe
     combined_df = pd.concat(labeled_dfs, ignore_index=True).dropna(subset=[DatasetColumns.TEXT_COL])
-    combined_df[DatasetColumns.TEXT_COL] = combined_df[DatasetColumns.TEXT_COL].astype(str).str.strip()
+    
+    # normalize text for deduplication (lowercase and strip)
+    combined_df["_temp_text_norm"] = combined_df[DatasetColumns.TEXT_COL].str.lower().str.strip()
 
-    # data deduplication based on hash
+    # sample the number of entries before actually removing duplicates for logging later on
     pre_dedupe_count = len(combined_df)
-    labels_tuple = combined_df[DatasetColumns.LABELS_COL].map(tuple)
-    dedupe_hash = pd.util.hash_pandas_object(
-        pd.DataFrame({
-            DatasetColumns.TEXT_COL: combined_df[DatasetColumns.TEXT_COL],
-            "_labels_tuple": labels_tuple
-        }),
-        index=False
+
+    # Create a helper column of sorted tuples to handle label order variations
+    # ie: ["Action", "Comedy"] becomes ("Action", "Comedy") and ["Comedy", "Action"] also becomes ("Action", "Comedy") | (agnostic to order + tuple conversion for hashability)
+    combined_df["_temp_labels_tuple"] = combined_df[DatasetColumns.LABELS_COL].apply(
+        lambda x: tuple(sorted(x)) if isinstance(x, (list, set, tuple)) else (x,)
     )
-    combined_df = combined_df.loc[~dedupe_hash.duplicated()].reset_index(drop=True)
+
+    policy = DataDedupConfig.SAME_TEXT_DIFFERENT_LABELS
+    logger.info(f"Deduplication policy for same text/different labels: {policy}")
+
+    # policy based deduplication
+
+    if policy == "keep_all":
+        # keep separate rows for different label combinations
+        combined_df = combined_df.drop_duplicates(
+            subset=["_temp_text_norm", "_temp_labels_tuple"],
+            keep='first'
+        )
+
+    elif policy == "keep_first":
+        # keep first occurrence per text, discard other labels (reduces noise, model is only learning one label combo per text)
+        combined_df = combined_df.drop_duplicates(
+            subset=["_temp_text_norm"],
+            keep='first'
+        )
+
+    elif policy == "merge_labels":
+        # merge labels into a single row per text
+        merged_rows = []
+        for _, group in combined_df.groupby("_temp_text_norm", sort=False):
+            merged_labels = sorted({label for labels in group["_temp_labels_tuple"] for label in labels})
+            row = group.iloc[0].copy()
+            row[DatasetColumns.LABELS_COL] = merged_labels
+            merged_rows.append(row)
+
+        combined_df = pd.DataFrame(merged_rows)
+
+    elif policy == "drop_conflicts":
+        # drop any text that appears with multiple distinct label sets
+        label_variety = combined_df.groupby("_temp_text_norm")["_temp_labels_tuple"].nunique()
+        conflict_texts = label_variety[label_variety > 1].index
+        
+        if len(conflict_texts) > 0:
+            logger.info(f"Dropping {len(conflict_texts)} conflicting texts with multiple label sets")
+
+        combined_df = combined_df[~combined_df["_temp_text_norm"].isin(conflict_texts)]
+        combined_df = combined_df.drop_duplicates(
+            subset=["_temp_text_norm", "_temp_labels_tuple"],
+            keep='first'
+        )
+
+    else:
+        raise ValueError(f"Unknown deduplication policy: {policy}")
+
+    # clean up helper column
+    combined_df = combined_df.drop(columns=["_temp_text_norm", "_temp_labels_tuple"]).reset_index(drop=True)
+    
     post_dedupe_count = len(combined_df)
 
-    if pre_dedupe_count != post_dedupe_count:
-        # pre_dedupe_count - post_dedupe_count gives number of duplicates removed, and we log the percentage of duplicates removed
-        logger.info(f"Deduplicated {pre_dedupe_count - post_dedupe_count} entries (kept {post_dedupe_count}/{pre_dedupe_count})")
-    
+    # log the number of duplicates found and removed
+    diff = pre_dedupe_count - post_dedupe_count
+    if diff > 0:
+        logger.info(f"Deduplicated {diff} entries (kept {post_dedupe_count}/{pre_dedupe_count})")
+        
     else:
         logger.info(f"No duplicates found (kept {post_dedupe_count}/{pre_dedupe_count})")
     
