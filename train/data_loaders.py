@@ -26,9 +26,9 @@ def load_phishing_dataset(base_dir=None):
         text_col = find_text_column(df_phish)
 
         if text_col:
+            logger.info(f"Phishing raw columns: {df_phish.columns.tolist()}")
             df_phish = df_phish[[text_col]].dropna().rename(columns={text_col: DatasetColumns.TEXT_COL})
             logger.info(f"Phishing loaded: {len(df_phish)} samples (text col: {text_col})")
-            logger.info(f"Phishing columns: {df_phish.columns.tolist()}")
             return df_phish, 'phishing'
         
         else:
@@ -53,9 +53,9 @@ def load_hate_speech_dataset(base_dir=None):
         df_hate = pd.read_parquet(hate_path)
 
         if DatasetColumns.TEXT_COL in df_hate.columns and DatasetColumns.HATE_SPEECH_SCORE_COL in df_hate.columns:
+            logger.info(f"Measuring hate raw columns: {df_hate.columns.tolist()}")
             df_hate = df_hate[[DatasetColumns.TEXT_COL, DatasetColumns.HATE_SPEECH_SCORE_COL]].dropna()
             logger.info(f"Measuring hate loaded: {len(df_hate)} samples")
-            logger.info(f"Measuring hate columns: {df_hate.columns.tolist()}")
             return df_hate, 'hate_speech'
         
         else:
@@ -77,9 +77,9 @@ def load_tweet_hate_dataset(base_dir=None):
         df_tweet = pd.read_parquet(tweet_hate_path)
 
         if DatasetColumns.TEXT_COL in df_tweet.columns and DatasetColumns.LABEL_COL in df_tweet.columns:
+            logger.info(f"Tweet hate raw columns: {df_tweet.columns.tolist()}")
             df_tweet = df_tweet[[DatasetColumns.TEXT_COL, DatasetColumns.LABEL_COL]].dropna()
             logger.info(f"Tweet hate loaded: {len(df_tweet)} samples")
-            logger.info(f"Tweet hate columns: {df_tweet.columns.tolist()}")
             return df_tweet, 'tweet_hate'
         
         else:
@@ -99,10 +99,10 @@ def load_toxicchat_dataset(base_dir=None):
         text_col = find_text_column(df_toxic)
 
         if text_col and DatasetColumns.TOXICITY_COL in df_toxic.columns:
+            logger.info(f"ToxicChat raw columns: {df_toxic.columns.tolist()}")
             df_toxic = df_toxic[[text_col, DatasetColumns.TOXICITY_COL]].dropna()
             df_toxic = df_toxic.rename(columns={text_col: DatasetColumns.TEXT_COL})
             logger.info(f"ToxicChat loaded: {len(df_toxic)} samples (text col: {text_col})")
-            logger.info(f"ToxicChat columns: {df_toxic.columns.tolist()}")
             return df_toxic, 'toxicchat'
         
         else:
@@ -126,10 +126,10 @@ def load_jigsaw_dataset(base_dir=None):
         toxicity_col = next((c for c in df_jig.columns if 'toxic' in c.lower() or 'target' in c.lower()), None)
 
         if text_col and toxicity_col:
+            logger.info(f"Jigsaw raw columns: {df_jig.columns.tolist()}")
             df_jig = df_jig[[text_col, toxicity_col]].dropna()
             df_jig = df_jig.rename(columns={text_col: DatasetColumns.TEXT_COL, toxicity_col: DatasetColumns.TOXICITY_COL})
             logger.info(f"Jigsaw loaded: {len(df_jig)} samples")
-            logger.info(f"Jigsaw columns: {df_jig.columns.tolist()}")
             return df_jig, 'jigsaw'
         
         else:
