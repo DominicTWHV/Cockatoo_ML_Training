@@ -131,7 +131,106 @@ class DataSplitConfig:
     # higher values make weights more uniform, lower values emphasize imbalance more
     WEIGHT_SMOOTHING = 1e-6
 
-    SAFETY_MAXIMUM_WEIGHT = 10.0 # if the reweighed dataset exceeds this number in one or more category, a warning will be raised
+
+class WeightRatioThresholds:
+    # a config class to prevent/warn against unusual/extreme weights from rebalancing (if applicable)
+    
+    # weight ratio = max_weight / min_weight (where weights are calculated from class frequencies)
+    
+    # status: safe
+    # range: 1:1 to 1:5
+    # effect: standard for mild imbalance, nothing to worry about
+    # action: N/A
+    SAFE_MAX = 5.0
+    
+    # status: caution
+    # range: 1:5 to 1:20
+    # effect: requires lower learning rates and gradient clipping to stay stable
+    # action: automatically apply lower learning rate (configurable) and raise warning
+    CAUTION_MIN = 5.0
+    CAUTION_MAX = 20.0
+    CAUTION_LR_MULTIPLIER = 0.1  # multiply base LR by this factor (e.g., if base LR is 1e-4, use 1e-5)
+    
+    # status: dangerous
+    # range: 1:20 to 1:50
+    # effect: high risk of training collapse, model likely to predict majority class only
+    # action: raise warnings, do NOT automatically compensate
+    DANGEROUS_MIN = 20.0
+    DANGEROUS_MAX = 50.0
+    
+    # status: extreme
+    # range: > 1:100
+    # effect: often results in NaN loss or complete divergence within first few hundred steps
+    # action: raise critical warnings, strongly recommend intervention
+    EXTREME_MIN = 100.0
+    
+    # status: critical
+    # Range: 1:50 to 1:100
+    # Effect: Very high risk of divergence and "All-Minority" predictions
+    # Action: Raise critical warnings
+    CRITICAL_MIN = 50.0
+    CRITICAL_MAX = 100.0
+
+
+class WeightCheckingPolicy:
+    # defines actions and messages for different weight ratio scenarios
+    
+    POLICIES = {
+        "safe": {
+            "threshold_min": 1.0,
+            "threshold_max": WeightRatioThresholds.SAFE_MAX,
+            "status": "SAFE",
+            "description": "Standard for mild imbalance. Usually converges well.",
+            "action": "none",
+            "apply_lr_adjustment": False,
+            "raise_warning": False,
+        },
+        "caution": {
+            "threshold_min": WeightRatioThresholds.CAUTION_MIN,
+            "threshold_max": WeightRatioThresholds.CAUTION_MAX,
+            "status": "CAUTION",
+            "description": "Requires lower learning rates and gradient clipping to stay stable.",
+            "action": "adjust_lr",
+            "apply_lr_adjustment": True,
+            "raise_warning": True,
+            "lr_multiplier": WeightRatioThresholds.CAUTION_LR_MULTIPLIER,
+        },
+        "dangerous": {
+            "threshold_min": WeightRatioThresholds.DANGEROUS_MIN,
+            "threshold_max": WeightRatioThresholds.DANGEROUS_MAX,
+            "status": "DANGEROUS",
+            "description": "High risk of training collapse. Model likely to produce 'All-Minority' predictions.",
+            "action": "warn_only",
+            "apply_lr_adjustment": False,
+            "raise_warning": True,
+        },
+        "critical": {
+            "threshold_min": WeightRatioThresholds.CRITICAL_MIN,
+            "threshold_max": WeightRatioThresholds.CRITICAL_MAX,
+            "status": "CRITICAL",
+            "description": "Very high risk of divergence and 'All-Minority' predictions. Consider data collection or rebalancing strategy.",
+            "action": "warn_only",
+            "apply_lr_adjustment": False,
+            "raise_warning": True,
+        },
+        "extreme": {
+            "threshold_min": WeightRatioThresholds.EXTREME_MIN,
+            "threshold_max": float('inf'),
+            "status": "EXTREME",
+            "description": "Often results in NaN loss or complete divergence within first few hundred steps. Intervention strongly recommended.",
+            "action": "warn_only",
+            "apply_lr_adjustment": False,
+            "raise_warning": True,
+        },
+    }
+    
+    @classmethod
+    def get_policy(cls, weight_ratio: float) -> dict:
+        for policy_name, policy_config in cls.POLICIES.items():
+            if (policy_config["threshold_min"] <= weight_ratio < policy_config["threshold_max"]):
+                return policy_config
+            
+        return cls.POLICIES["extreme"]  # default to extreme if ratio exceeds all thresholds
 
 class DataDedupConfig:
     # policy for handling same normalized text appearing with different labels
