@@ -69,6 +69,7 @@ class RebalancingPolicy:
 
     # rebalancing strategies for handling class imbalance
     OVERSAMPLING = "oversampling"      # upsample minority classes to match majority
+    UNDERSAMPLING = "undersampling"    # downsample majority classes to match minority
     REWEIGHTING = "reweighting"        # assign higher loss weights to minority classes
     COMBINED = "combined"              # both oversampling and reweighting
 
@@ -82,7 +83,7 @@ class DataSplitConfig:
     RANDOM_STATE = 42 #or use random.randint(0, 10000) for non-deterministic splits
 
     # class rebalancing policy (applies to training split only)
-    # options: RebalancingPolicy.OVERSAMPLING, RebalancingPolicy.REWEIGHTING, RebalancingPolicy.COMBINED, None
+    # options: RebalancingPolicy.OVERSAMPLING, RebalancingPolicy.UNDERSAMPLING, RebalancingPolicy.REWEIGHTING, RebalancingPolicy.COMBINED, None
     
     # oversampling: upsamples minority label combinations to match the majority (increases dataset size)
     #   pros: leverages all data, relatively simple
@@ -93,6 +94,11 @@ class DataSplitConfig:
     #   pros: doesn't increase dataset size, mathematically principled, more efficient
     #   cons: may not fully address imbalance if some classes are extremely rare, can be sensitive to weight calculation method
     #   when: most cases
+
+    # undersampling: downsamples majority label combinations to match the minority (reduces dataset size)
+    #   pros: faster training, reduces dominance of majority label combos
+    #   cons: discards data, may reduce model performance if data is scarce
+    #   when: datasets are large and imbalance is high, or when training speed is critical
 
     # combined: applies both oversampling and reweighting
     #   pros: addresses imbalance from multiple angles
