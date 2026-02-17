@@ -34,7 +34,7 @@ def main():
     # print stats
     print_dataset_stats(combined_df, dataset)
     
-    logger.info(f"Done! If more datasets loaded, update train_text.py with '{save_path}'")
+    logger.info(f"Done! If more datasets loaded, update train.py with '{save_path}'")
 
 
 if __name__ == "__main__":

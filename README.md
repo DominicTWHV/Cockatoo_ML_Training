@@ -92,7 +92,7 @@ python3 prepare_data.py
 Run training loop:
 
 ```bash
-python3 train_text.py
+python3 train.py
 ```
 
 **Run Evaluation**
@@ -100,7 +100,7 @@ python3 train_text.py
 *Note: The evaluation process is automatic when running a full training loop. The steps below are for evaluating a pre-existing model.*
 
 ```bash
-python3 train_text.py --eval-only
+python3 train.py --eval-only
 ```
 
 This bypasses training and skips directly to loading a model from `PathConfig.MODEL_OUTPUT_DIR` and evaluating it against either the `test` (default) or `validation` dataset obtained earlier from pre-processing.
@@ -108,11 +108,11 @@ This bypasses training and skips directly to loading a model from `PathConfig.MO
 This behavior can be manually defined with
 
 ```bash
-python3 train_text.py --eval-only --eval-split test #for testing against the test split
+python3 train.py --eval-only --eval-split test #for testing against the test split
 
 # or
 
-python3 train_text.py --eval-only --eval-split validation #for testing against the validation split
+python3 train.py --eval-only --eval-split validation #for testing against the validation split
 ```
 
 **Metrics Telemetry**
