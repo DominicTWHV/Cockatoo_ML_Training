@@ -7,7 +7,7 @@ from sklearn.model_selection import train_test_split
 from cockatoo_ml.registry import LabelConfig, DatasetTypeConfig, DataSplitConfig, DatasetColumns, DataDedupConfig, RebalancingPolicy
 from cockatoo_ml.logger.context import data_processing_logger as logger
 
-from train.rebalancing import rebalance_dataset
+from train.rebalancing import rebalance_dataset, check_and_compensate_weight_ratio
 
 # the data processor takes in the loaded datasets, applies appropriate labels, combines them, and splits into train/val/test sets for training
 def apply_labels_by_type(df, dataset_type):
@@ -224,12 +224,16 @@ def print_dataset_stats(combined_df, dataset):
         
         for label, weight in weights_dict.items():
             logger.info(f"  {label}: {weight:.4f}")
-
-            if weight > DataSplitConfig.SAFETY_MAXIMUM_WEIGHT:
-                logger.warning(f"  WARNING: Weight for label '{label}' exceeds safety maximum of {DataSplitConfig.SAFETY_MAXIMUM_WEIGHT} | It is no longer recommended to use rebalancing with this dataset without further adjustments | Consider changing the rebalancing policy or adjusting the weight calculation method")
         
         logger.info(f"Weight calculation method: {DataSplitConfig.WEIGHT_CALCULATION}")
         logger.info(f"Rebalancing policy: {DataSplitConfig.REBALANCING_POLICY}")
+        
+        # apply dynamic weight ratio checking and compensation recommendations
+        check_result = check_and_compensate_weight_ratio(
+            class_weights=class_weights,
+            base_learning_rate=None,  # LR not available in this function, just check status
+            labels=LabelConfig.ACTIVE_LABELS
+        )
 
     else:
         logger.info("-" * 30)

@@ -4,7 +4,7 @@ import torch
 
 import numpy as np
 
-from cockatoo_ml.registry import DataSplitConfig, DatasetColumns, RebalancingPolicy
+from cockatoo_ml.registry import DataSplitConfig, DatasetColumns, RebalancingPolicy, WeightCheckingPolicy, WeightRatioThresholds
 from cockatoo_ml.logger.context import data_processing_logger as logger
 
 
@@ -240,3 +240,122 @@ def _apply_undersampling(df, random_state):
     logger.info(f"{post_counts.to_dict()}")
 
     return rebalanced_df
+
+
+def calculate_weight_ratio(class_weights):
+    """
+    Calculate the weight ratio (max_weight / min_weight) from class weights.
+    
+    Args:
+        class_weights: torch tensor of shape [num_classes] with per-class weights
+        
+    Returns:
+        float: ratio of max weight to min weight
+    """
+    weights_np = class_weights.numpy() if isinstance(class_weights, torch.Tensor) else class_weights
+    max_weight = np.max(weights_np)
+    min_weight = np.min(weights_np)
+    
+    # avoid division by zero
+    if min_weight == 0:
+        min_weight = 1e-8
+    
+    ratio = max_weight / min_weight
+    return float(ratio)
+
+
+def check_and_compensate_weight_ratio(class_weights, base_learning_rate=None, labels=None):
+    
+    result = {
+        'weight_ratio': None,
+        'policy': None,
+        'adjusted_learning_rate': None,
+        'warnings': [],
+        'compensations_applied': [],
+    }
+    
+    # calc weight ratio
+    weight_ratio = calculate_weight_ratio(class_weights)
+    result['weight_ratio'] = weight_ratio
+    
+    # get policy for this ratio
+    policy = WeightCheckingPolicy.get_policy(weight_ratio)
+    result['policy'] = policy
+    
+    # log weight information
+    weights_np = class_weights.numpy() if isinstance(class_weights, torch.Tensor) else class_weights
+    logger.info("-" * 50)
+    logger.info(f"WEIGHT RATIO ANALYSIS - Status: {policy['status']}")
+    logger.info(f"Weight Ratio (max/min): {weight_ratio:.2f}:1")
+    logger.info(f"Description: {policy['description']}")
+    logger.info(f"Min weight: {np.min(weights_np):.4f} | Max weight: {np.max(weights_np):.4f}")
+    
+    if labels is not None and len(labels) == len(weights_np):
+        logger.info("Per-class weights:")
+        for label, weight in zip(labels, weights_np):
+            logger.info(f"  {label}: {weight:.4f}")
+    
+    # apply compensations based on policy
+    if policy['status'] == 'SAFE':
+        logger.info("No intervention needed - ratio is within safe range.")
+        
+    elif policy['status'] == 'CAUTION':
+        # apply LR adjustment
+        if base_learning_rate is not None and policy['apply_lr_adjustment']:
+            adjusted_lr = base_learning_rate * policy.get('lr_multiplier', WeightRatioThresholds.CAUTION_LR_MULTIPLIER)
+            result['adjusted_learning_rate'] = adjusted_lr
+            result['compensations_applied'].append('learning_rate_adjustment')
+            
+            warning_msg = (
+                f"⚠️  CAUTION: Weight ratio {weight_ratio:.2f}:1 is in caution range. "
+                f"Automatically adjusting learning rate from {base_learning_rate:.2e} to {adjusted_lr:.2e}. "
+                f"Consider using gradient clipping and monitoring loss closely."
+            )
+            logger.warning(warning_msg)
+            result['warnings'].append(warning_msg)
+
+        else:
+            warning_msg = (
+                f"⚠️  CAUTION: Weight ratio {weight_ratio:.2f}:1 is in caution range. "
+                f"Requires lower learning rates (e.g., 1×10⁻⁵) and gradient clipping to stay stable."
+            )
+            logger.warning(warning_msg)
+            result['warnings'].append(warning_msg)
+    
+    elif policy['status'] == 'DANGEROUS':
+        # raise warnings only, no automatic compensation
+        warning_msg = (
+            f"⚠️  DANGEROUS: Weight ratio {weight_ratio:.2f}:1 is in dangerous range (1:20 to 1:50). "
+            f"High risk of training collapse. Model likely to predict only majority/minority classes. "
+            f"STRONGLY RECOMMENDED: Review dataset balance, consider different rebalancing strategy, "
+            f"or collect more data for minority classes. No automatic compensation applied."
+        )
+
+        logger.warning(warning_msg)
+        result['warnings'].append(warning_msg)
+    
+    elif policy['status'] == 'CRITICAL':
+        warning_msg = (
+            f"🔴 CRITICAL: Weight ratio {weight_ratio:.2f}:1 is in critical range (1:50 to 1:100). "
+            f"Very high risk of divergence and NaN loss. Model may predict only majority class."
+            f"URGENT: Consider data collection, different rebalancing strategy (e.g., combined oversampling + reweighting), "
+            f"or adjust class weight calculation method. Training may fail or produce poor results."
+        )
+        logger.error(warning_msg)
+        result['warnings'].append(warning_msg)
+    
+    elif policy['status'] == 'EXTREME':
+        warning_msg = (
+            f"🔴 EXTREME: Weight ratio {weight_ratio:.2f}:1 is in extreme range (>1:100). "
+            f"CRITICAL RISK: Often results in NaN loss or complete divergence within the first few hundred steps. "
+            f"URGENT INTERVENTION REQUIRED: Do NOT proceed with training without substantial dataset rebalancing or "
+            f"alternative approaches (e.g., focal loss, class-balanced sampling). "
+            f"Current configuration is almost certain to fail."
+        )
+        logger.error(warning_msg)
+        result['warnings'].append(warning_msg)
+    
+    logger.info("-" * 50)
+    
+    return result
+

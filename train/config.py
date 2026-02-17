@@ -1,6 +1,7 @@
 from transformers import TrainingArguments
 
 from cockatoo_ml.registry import TrainingConfig, PathConfig
+from train.rebalancing import check_and_compensate_weight_ratio
 
 # this file contains training configs for the model
 def get_training_args(
@@ -60,3 +61,55 @@ def get_training_args(
     )
     
     return training_args
+
+
+def get_adjusted_training_args_with_weight_check(
+    class_weights=None,
+    dataset_labels=None,
+    output_dir=None,
+    logging_dir=None,
+    num_train_epochs=None,
+    batch_size=None,
+    gradient_accumulation_steps=None,
+    learning_rate=None,
+    use_fp16=None
+):
+    
+    # use registry defaults if not provided
+    if learning_rate is None:
+        learning_rate = TrainingConfig.LEARNING_RATE
+    
+    compensation_info = {
+        'applied': False,
+        'original_lr': learning_rate,
+        'adjusted_lr': learning_rate,
+        'check_result': None,
+    }
+    
+    # check weight ratio and get recommendations
+    if class_weights is not None:
+        check_result = check_and_compensate_weight_ratio(
+            class_weights=class_weights,
+            base_learning_rate=learning_rate,
+            labels=dataset_labels
+        )
+        compensation_info['check_result'] = check_result
+        
+        # apply learning rate adjustment if policy requires
+        if check_result['adjusted_learning_rate'] is not None:
+            learning_rate = check_result['adjusted_learning_rate']
+            compensation_info['adjusted_lr'] = learning_rate
+            compensation_info['applied'] = True
+    
+    #get training args with potentially adjusted learning rate
+    training_args = get_training_args(
+        output_dir=output_dir,
+        logging_dir=logging_dir,
+        num_train_epochs=num_train_epochs,
+        batch_size=batch_size,
+        gradient_accumulation_steps=gradient_accumulation_steps,
+        learning_rate=learning_rate,
+        use_fp16=use_fp16
+    )
+    
+    return training_args, compensation_info
