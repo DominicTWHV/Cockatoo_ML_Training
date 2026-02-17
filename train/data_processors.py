@@ -196,6 +196,9 @@ def split_dataset(combined_df, test_size=None, val_size=None, random_state=None)
 
 def print_dataset_stats(combined_df, dataset):
     # a function to show the user some stats about the combined dataset and the splits
+    logger.info("="*30)
+    logger.info("DATASET SUMMARY")
+    logger.info("="*30)
     logger.info(f"Combined total: {len(combined_df)} samples")
     logger.info(f"Train: {len(dataset['train'])} | Validation: {len(dataset['validation'])} | Test: {len(dataset['test'])}")
     
@@ -211,3 +214,18 @@ def print_dataset_stats(combined_df, dataset):
     rates = (label_matrix.mean() * 100).round(2)
     logger.info(f"Train positive counts by label: {positives.to_dict()}")
     logger.info(f"Train positive rates by label (%): {rates.to_dict()}")
+    
+    # show adjusted class weights if rebalancing was applied
+    class_weights = getattr(dataset, 'class_weights', None)
+    if class_weights is not None:
+        logger.info("-" * 30)
+        logger.info("REBALANCING APPLIED - Adjusted Class Weights:")
+        weights_dict = {label: float(weight) for label, weight in zip(LabelConfig.ACTIVE_LABELS, class_weights.tolist())}
+        for label, weight in weights_dict.items():
+            logger.info(f"  {label}: {weight:.4f}")
+        logger.info(f"Weight calculation method: {DataSplitConfig.WEIGHT_CALCULATION}")
+        logger.info(f"Rebalancing policy: {DataSplitConfig.REBALANCING_POLICY}")
+    else:
+        logger.info("-" * 30)
+        logger.info("No rebalancing applied - using default weights")
+    logger.info("="*60)
