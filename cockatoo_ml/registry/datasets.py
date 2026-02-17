@@ -131,6 +131,8 @@ class DataSplitConfig:
     # higher values make weights more uniform, lower values emphasize imbalance more
     WEIGHT_SMOOTHING = 1e-6
 
+    SAFETY_MAXIMUM_WEIGHT = 10.0 # if the reweighed dataset exceeds this number in one or more category, a warning will be raised
+
 class DataDedupConfig:
     # policy for handling same normalized text appearing with different labels
     # options: "keep_all", "keep_first", "merge_labels", "drop_conflicts"

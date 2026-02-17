@@ -221,11 +221,18 @@ def print_dataset_stats(combined_df, dataset):
         logger.info("-" * 30)
         logger.info("REBALANCING APPLIED - Adjusted Class Weights:")
         weights_dict = {label: float(weight) for label, weight in zip(LabelConfig.ACTIVE_LABELS, class_weights.tolist())}
+        
         for label, weight in weights_dict.items():
             logger.info(f"  {label}: {weight:.4f}")
+
+            if weight > DataSplitConfig.SAFETY_MAXIMUM_WEIGHT:
+                logger.warning(f"  WARNING: Weight for label '{label}' exceeds safety maximum of {DataSplitConfig.SAFETY_MAXIMUM_WEIGHT} | It is no longer recommended to use rebalancing with this dataset without further adjustments | Consider changing the rebalancing policy or adjusting the weight calculation method")
+        
         logger.info(f"Weight calculation method: {DataSplitConfig.WEIGHT_CALCULATION}")
         logger.info(f"Rebalancing policy: {DataSplitConfig.REBALANCING_POLICY}")
+
     else:
         logger.info("-" * 30)
         logger.info("No rebalancing applied - using default weights")
+
     logger.info("="*60)
