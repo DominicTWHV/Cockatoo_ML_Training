@@ -1,27 +1,28 @@
-from .colors import bcolors
-from .model import ModelConfig, InferenceConfig, ModelType
-from .training import TrainingConfig, MetricsConfig, CallbackConfig
-from .datasets import DatasetSources, DatasetPaths, DatasetColumns, DataSplitConfig, DataDedupConfig
-from .labels import LabelConfig, DatasetTypeConfig
-from .paths import PathConfig
 from .api import APIConfig, WebhookConfig
+from .colors import bcolors
+from .datasets import DatasetSources, DatasetPaths, DatasetColumns, DataSplitConfig, DataDedupConfig, RebalancingPolicy
+from .labels import LabelConfig, DatasetTypeConfig
+from .model import ModelConfig, InferenceConfig, ModelType
+from .paths import PathConfig
+from .training import TrainingConfig, MetricsConfig, CallbackConfig
 
 __all__ = [
+    'APIConfig',
     'bcolors',
+    'CallbackConfig',
+    'DataDedupConfig',
+    'DatasetColumns',
+    'DatasetPaths',
+    'DatasetSources',
+    'DatasetTypeConfig',
+    'DataSplitConfig',
+    'InferenceConfig',
+    'LabelConfig',
+    'MetricsConfig',
     'ModelConfig',
     'ModelType',
-    'InferenceConfig',
-    'TrainingConfig',
-    'MetricsConfig',
-    'CallbackConfig',
-    'DatasetSources',
-    'DatasetPaths',
-    'DatasetColumns',
-    'DataSplitConfig',
-    'DataDedupConfig',
-    'LabelConfig',
-    'DatasetTypeConfig',
     'PathConfig',
-    'APIConfig',
+    'RebalancingPolicy',
+    'TrainingConfig',
     'WebhookConfig',
 ]
