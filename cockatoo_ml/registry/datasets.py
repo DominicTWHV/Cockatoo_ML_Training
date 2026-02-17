@@ -61,6 +61,18 @@ class DatasetColumns:
     HATE_SPEECH_SCORE_COL = 'hate_speech_score'
 
 
+class RebalancingPolicy:
+    # this is a mapping to map config policy names to config values
+    # do not change unless you know what you are doing
+
+    # in most cases you are looking to change the policy in DataSplitConfig.REBALANCING_POLICY, not here
+
+    # rebalancing strategies for handling class imbalance
+    OVERSAMPLING = "oversampling"      # upsample minority classes to match majority
+    REWEIGHTING = "reweighting"        # assign higher loss weights to minority classes
+    COMBINED = "combined"              # both oversampling and reweighting
+
+
 class DataSplitConfig:
     # dataset split ratios
     TEST_SIZE = 0.2
@@ -69,10 +81,49 @@ class DataSplitConfig:
     # random seed for reproducibility
     RANDOM_STATE = 42 #or use random.randint(0, 10000) for non-deterministic splits
 
-    # optional class rebalancing (applies to training split only)
-    # when enabled, minority label combinations are upsampled to match the majority
-    REBALANCE_TRAINING_DATA = True
+    # class rebalancing policy (applies to training split only)
+    # options: RebalancingPolicy.OVERSAMPLING, RebalancingPolicy.REWEIGHTING, RebalancingPolicy.COMBINED, None
+    
+    # oversampling: upsamples minority label combinations to match the majority (increases dataset size)
+    #   pros: leverages all data, relatively simple
+    #   cons: can lead to overfitting on minority samples, increases training time
+    #   when: when you have sufficient GPU resources and want to maximize use of available data, or when imbalance is severe and reweighting alone doesn't help
 
+    # reweighting: calculates loss weights automatically based on class frequency
+    #   pros: doesn't increase dataset size, mathematically principled, more efficient
+    #   cons: may not fully address imbalance if some classes are extremely rare, can be sensitive to weight calculation method
+    #   when: most cases
+
+    # combined: applies both oversampling and reweighting
+    #   pros: addresses imbalance from multiple angles
+    #   cons: most complex, may be overkill for some use cases
+    #   when: severe imbalance and you have resources to handle larger dataset
+
+    # None: disables rebalancing (not recommended for imbalanced datasets)
+    #   when: dataset is already (relatively) balanced, or as a baseline to compare against rebalancing strategies
+
+    REBALANCING_POLICY = RebalancingPolicy.REWEIGHTING
+    
+    # weight calculation method for reweighting (when policy is REWEIGHTING or COMBINED)
+    # options: "inverse_frequency", "effective_num", "sqrt_inverse"
+
+    # inverse_frequency: weights = total_samples / (num_classes * class_count)
+    #   pros: simple, intuitive, widely used
+    #   cons: can produce extreme weights for very rare classes, may lead to instability during training
+    
+    # effective_num: weights = (1 - beta) / (1 - beta^n) where beta = (total_samples - 1) / total_samples
+    #   pros: smoother scaling, handles rare classes better
+    #   cons: may require tuning of beta param, does not account for instance-level difficulty (all samples of a class get same weight)
+
+    # sqrt_inverse: weights = sqrt(total_samples / class_count)
+    #   pros: gentler than inverse frequency, still emphasizes imbalance
+    #   cons: may underemphasize rare classes compared to inverse frequency
+
+    WEIGHT_CALCULATION = "inverse_frequency"
+    
+    # smoothing factor for weight calculation (prevents infinite weights for zero-count classes)
+    # higher values make weights more uniform, lower values emphasize imbalance more
+    WEIGHT_SMOOTHING = 1e-6
 
 class DataDedupConfig:
     # policy for handling same normalized text appearing with different labels
