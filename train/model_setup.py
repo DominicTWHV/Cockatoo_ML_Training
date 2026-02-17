@@ -72,8 +72,16 @@ class CLIPClassifier(nn.Module):
         })()
 
 
-def compute_pos_weight(dataset):
-    # compute pos weight for BCE loss based on label distribution
+def compute_pos_weight(dataset, class_weights=None):
+    # compute class weights for imbalanced sets for BCE loss
+
+    # if weights already computed during rebalancing, use those
+    if class_weights is not None:
+        logger.info(f"Using pre-computed class weights from rebalancing")
+        return class_weights
+    
+    # fallback: compute weights from dataset
+    logger.info(f"Computing class weights from dataset (no pre-computed weights provided)")
     labels = torch.tensor(dataset['labels'], dtype=torch.float32)
     if labels.ndim == 1:
         labels = labels.unsqueeze(1)
