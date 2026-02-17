@@ -170,7 +170,6 @@ def split_dataset(combined_df, test_size=None, val_size=None, random_state=None)
     # apply rebalancing policy to training split
     policy = DataSplitConfig.REBALANCING_POLICY
     if policy and (policy == RebalancingPolicy.OVERSAMPLING or policy == RebalancingPolicy.REWEIGHTING or policy == RebalancingPolicy.COMBINED):
-        logger.info(f"Applying rebalancing policy: {policy}")
         train_df, class_weights = rebalance_dataset(train_df, policy=policy, random_state=random_state)
     
     else:
