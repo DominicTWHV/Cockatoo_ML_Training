@@ -73,6 +73,8 @@ python3 download_data.py
 
 Preprocess dataset:
 
+*Tip: review the rebalancing configs in `cockatoo_ml/registry/datasets.py` before running this step. You can adjust the rebalancing policy, weight calculation method, and other parameters to see how they affect the training process and model performance. See [rebalancing docs](docs/rebalancing.md) for more details on the rebalancing options and their implications.*
+
 ```bash
 python3 prepare_data.py
 ```
@@ -266,7 +268,7 @@ hypercorn app:app --bind 0.0.0.0:8000
 
 This code is provided under the MIT License. Datasets are subject to their original licenses, which you should review before use:
 
-[Datasets Used](datasets.md)
+[Datasets Used](docs/datasets.md)
 
 *We have included links to a few datasets that are not used here. They will be used in future models when we revamp our image classification models.*
 
