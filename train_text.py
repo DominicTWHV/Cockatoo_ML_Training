@@ -54,7 +54,9 @@ def main():
         model = load_model()
     
     # compute pos weight for BCE loss
-    pos_weight = compute_pos_weight(dataset['train'])
+    # use pre-computed class weights if available from rebalancing, otherwise compute from dataset
+    class_weights = getattr(dataset, 'class_weights', None)
+    pos_weight = compute_pos_weight(dataset['train'], class_weights=class_weights) #this would just return class_weights if present (computed during rebalancing)
     
     # get training args
     training_args = get_training_args()
