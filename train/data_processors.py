@@ -4,8 +4,10 @@ from datasets import Dataset, DatasetDict
 
 from sklearn.model_selection import train_test_split
 
-from cockatoo_ml.registry import LabelConfig, DatasetTypeConfig, DataSplitConfig, DatasetColumns, DataDedupConfig
+from cockatoo_ml.registry import LabelConfig, DatasetTypeConfig, DataSplitConfig, DatasetColumns, DataDedupConfig, RebalancingPolicy
 from cockatoo_ml.logger.context import data_processing_logger as logger
+
+from train.rebalancing import rebalance_dataset
 
 # the data processor takes in the loaded datasets, applies appropriate labels, combines them, and splits into train/val/test sets for training
 def apply_labels_by_type(df, dataset_type):
@@ -149,52 +151,6 @@ def combine_datasets(datasets):
     return combined_df
 
 
-def _rebalance_training_split(train_df, random_state):
-    logger.info("Rebalancing training split...")
-
-    # upsample minority label combinations to match the majority class
-    labels_tuple = train_df[DatasetColumns.LABELS_COL].map(tuple)
-    train_df = train_df.copy()
-    train_df["_labels_tuple"] = labels_tuple
-
-    counts = train_df["_labels_tuple"].value_counts()
-    if counts.empty:
-        return train_df.drop(columns=["_labels_tuple"])
-
-    max_count = counts.max()
-    pre_rebalance_total = len(train_df)
-    logger.info("Training split label-combo distribution before rebalance:")
-    logger.info(f"{counts.to_dict()}")
-    rebalanced_parts = []
-
-    for label_combo, combo_count in counts.items():
-        combo_df = train_df[train_df["_labels_tuple"] == label_combo]
-
-        if combo_count < max_count:
-            extra = combo_df.sample(
-                n=max_count - combo_count,
-                replace=True,
-                random_state=random_state
-            )
-            combo_df = pd.concat([combo_df, extra], ignore_index=True)
-            
-        rebalanced_parts.append(combo_df)
-
-    rebalanced_df = pd.concat(rebalanced_parts, ignore_index=True)
-    rebalanced_df = rebalanced_df.drop(columns=["_labels_tuple"]).sample(frac=1.0, random_state=random_state).reset_index(drop=True)
-
-    post_rebalance_total = len(rebalanced_df)
-    added = post_rebalance_total - pre_rebalance_total
-
-    post_counts = rebalanced_df[DatasetColumns.LABELS_COL].map(tuple).value_counts() #compute new distribution after rebalance
-
-    logger.info(f"Rebalanced training split: added {added} samples to match max class size of {max_count}")
-    logger.info("Training split label-combo distribution after rebalance:")
-    logger.info(f"{post_counts.to_dict()}")
-    
-    return rebalanced_df
-
-
 def split_dataset(combined_df, test_size=None, val_size=None, random_state=None):
     # split the dataset into train/val/test sets with stratification
     if test_size is None:
@@ -211,9 +167,14 @@ def split_dataset(combined_df, test_size=None, val_size=None, random_state=None)
         stratify=combined_df[DatasetColumns.LABELS_COL].apply(tuple)
     )
 
-    if DataSplitConfig.REBALANCE_TRAINING_DATA:
-        logger.info("Rebalancing training split to mitigate class imbalance")
-        train_df = _rebalance_training_split(train_df, random_state)
+    # apply rebalancing policy to training split
+    policy = DataSplitConfig.REBALANCING_POLICY
+    if policy and (policy == RebalancingPolicy.OVERSAMPLING or policy == RebalancingPolicy.COMBINED):
+        logger.info(f"Applying rebalancing policy: {policy}")
+        train_df, class_weights = rebalance_dataset(train_df, policy=policy, random_state=random_state)
+    
+    else:
+        class_weights = None
     
     val_df, test_df = train_test_split(
         temp_df, 
@@ -227,6 +188,9 @@ def split_dataset(combined_df, test_size=None, val_size=None, random_state=None)
         'validation': Dataset.from_pandas(val_df.reset_index(drop=True)),
         'test': Dataset.from_pandas(test_df.reset_index(drop=True))
     })
+    
+    # store class weights in dataset metadata for later access
+    dataset.class_weights = class_weights
     
     return dataset
 
