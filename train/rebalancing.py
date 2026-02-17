@@ -102,6 +102,17 @@ def rebalance_dataset(df, policy=None, random_state=None):
             smoothing=DataSplitConfig.WEIGHT_SMOOTHING
         )
         return df, class_weights
+
+    elif policy == RebalancingPolicy.UNDERSAMPLING:
+        df = _apply_undersampling(df, random_state)
+        # calculate weights on the undersampled distribution for consistency
+        labels_series = df[DatasetColumns.LABELS_COL]
+        class_weights = calculate_class_weights(
+            labels_series,
+            method=DataSplitConfig.WEIGHT_CALCULATION,
+            smoothing=DataSplitConfig.WEIGHT_SMOOTHING
+        )
+        return df, class_weights
     
     elif policy == RebalancingPolicy.REWEIGHTING:
         # calculate class weights on the original imbalanced distribution
@@ -178,4 +189,54 @@ def _apply_oversampling(df, random_state):
     logger.info("Label-combo distribution after oversampling:")
     logger.info(f"{post_counts.to_dict()}")
     
+    return rebalanced_df
+
+
+def _apply_undersampling(df, random_state):
+    # downsamples majority classes by removing samples until all classes have the same number of samples as the minority class
+
+    logger.info("Rebalancing training split via undersampling...")
+
+    labels_tuple = df[DatasetColumns.LABELS_COL].map(tuple)
+    df = df.copy()
+    df["_labels_tuple"] = labels_tuple
+
+    counts = df["_labels_tuple"].value_counts()
+    if counts.empty:
+        return df.drop(columns=["_labels_tuple"])
+
+    min_count = counts.min()
+    pre_rebalance_total = len(df)
+    logger.info("Label-combo distribution before undersampling:")
+    logger.info(f"{counts.to_dict()}")
+
+    rebalanced_parts = []
+
+    for label_combo, combo_count in counts.items():
+        combo_df = df[df["_labels_tuple"] == label_combo]
+
+        if combo_count > min_count:
+            combo_df = combo_df.sample(
+                n=min_count,
+                replace=False,
+                random_state=random_state
+            )
+
+        rebalanced_parts.append(combo_df)
+
+    rebalanced_df = pd.concat(rebalanced_parts, ignore_index=True)
+    rebalanced_df = rebalanced_df.drop(columns=["_labels_tuple"]).sample(
+        frac=1.0, random_state=random_state
+    ).reset_index(drop=True)
+
+    post_rebalance_total = len(rebalanced_df)
+    removed = pre_rebalance_total - post_rebalance_total
+
+    # compute new distribution after rebalance
+    post_counts = rebalanced_df[DatasetColumns.LABELS_COL].map(tuple).value_counts()
+
+    logger.info(f"Undersampled: removed {removed} samples (total: {pre_rebalance_total} → {post_rebalance_total})")
+    logger.info("Label-combo distribution after undersampling:")
+    logger.info(f"{post_counts.to_dict()}")
+
     return rebalanced_df
