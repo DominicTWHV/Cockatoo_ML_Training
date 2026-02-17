@@ -7,8 +7,9 @@ This document describes the policy-based dataset rebalancing system implemented 
 The rebalancing system provides multiple strategies to handle class imbalance in training data:
 
 1. **Oversampling**: Duplicates minority samples to match the majority class size
-2. **Reweighting**: Assigns higher loss weights to minority classes
-3. **Combined**: Applies both oversampling and reweighting
+2. **Undersampling**: Removes majority samples to match the minority class size
+3. **Reweighting**: Assigns higher loss weights to minority classes
+4. **Combined**: Applies both oversampling and reweighting
 
 ## Configuration
 
@@ -22,6 +23,7 @@ REBALANCING_POLICY = RebalancingPolicy.REWEIGHTING
 
 Choose from:
 - `RebalancingPolicy.OVERSAMPLING`: Upsample minority classes
+- `RebalancingPolicy.UNDERSAMPLING`: Downsample majority classes
 - `RebalancingPolicy.REWEIGHTING`: Calculate loss weights (recommended)
 - `RebalancingPolicy.COMBINED`: Both strategies
 - `None`: No rebalancing
@@ -98,9 +100,10 @@ Small constant added to prevent:
 1. **Data Loading**: Load and combine datasets from multiple sources
 2. **Deduplication**: Remove duplicate texts with conflict handling
 3. **Rebalancing** (applied to training split only):
-   - **Oversampling**: Upsample minority label combinations
-   - **Reweighting**: Calculate per-class loss weights
-   - **Combined**: Do both
+    - **Oversampling**: Upsample minority label combinations
+    - **Undersampling**: Downsample majority label combinations
+    - **Reweighting**: Calculate per-class loss weights
+    - **Combined**: Do both
 
 4. **Dataset Split**: Split into train/val/test with stratification
 5. **Training**: Use calculated weights in loss function
@@ -157,7 +160,19 @@ class DataSplitConfig:
 - You have sufficient GPU memory
 - You want maximum emphasis on minority classes
 
-### Example 4: No Rebalancing
+### Example 4: Undersampling Only
+
+```python
+class DataSplitConfig:
+    REBALANCING_POLICY = RebalancingPolicy.UNDERSAMPLING
+```
+
+**When to use:**
+- You want to reduce the training set size for faster iterations
+- The dataset is large and highly imbalanced
+- You can afford to discard majority samples
+
+### Example 5: No Rebalancing
 
 ```python
 class DataSplitConfig:
@@ -173,6 +188,12 @@ class DataSplitConfig:
 - **Data size increase**: Proportional to imbalance ratio
 - **Training time**: Increases with dataset size
 - **Memory**: May require more GPU memory (bigger dataset size, more memory required)
+
+### Undersampling
+- **Data size decrease**: Down to the minority class size
+- **Training time**: Decreases with dataset size
+- **Memory**: Lower requirements
+- **When**: Large datasets or rapid iteration needs
 
 ### Reweighting
 - **Data size**: No increase
