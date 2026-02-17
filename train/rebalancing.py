@@ -92,24 +92,37 @@ def rebalance_dataset(df, policy=None, random_state=None):
     
     logger.info(f"Applying rebalancing policy: {policy}")
     
-    # calculate class weights (used by all policies)
-    labels_series = df[DatasetColumns.LABELS_COL]
-    class_weights = calculate_class_weights(
-        labels_series,
-        method=DataSplitConfig.WEIGHT_CALCULATION,
-        smoothing=DataSplitConfig.WEIGHT_SMOOTHING
-    )
-    
     if policy == RebalancingPolicy.OVERSAMPLING:
         df = _apply_oversampling(df, random_state)
+        # recalculate weights after oversampling to reflect the new balanced distribution
+        labels_series = df[DatasetColumns.LABELS_COL]
+        class_weights = calculate_class_weights(
+            labels_series,
+            method=DataSplitConfig.WEIGHT_CALCULATION,
+            smoothing=DataSplitConfig.WEIGHT_SMOOTHING
+        )
         return df, class_weights
     
     elif policy == RebalancingPolicy.REWEIGHTING:
+        # calculate class weights on the original imbalanced distribution
+        labels_series = df[DatasetColumns.LABELS_COL]
+        class_weights = calculate_class_weights(
+            labels_series,
+            method=DataSplitConfig.WEIGHT_CALCULATION,
+            smoothing=DataSplitConfig.WEIGHT_SMOOTHING
+        )
         # for reweighting, we just return the weights without modifying the dataset
         return df, class_weights
     
     elif policy == RebalancingPolicy.COMBINED:
         df = _apply_oversampling(df, random_state)
+        # recalculate weights after oversampling to reflect the new balanced distribution
+        labels_series = df[DatasetColumns.LABELS_COL]
+        class_weights = calculate_class_weights(
+            labels_series,
+            method=DataSplitConfig.WEIGHT_CALCULATION,
+            smoothing=DataSplitConfig.WEIGHT_SMOOTHING
+        )
         return df, class_weights
     
     else:
