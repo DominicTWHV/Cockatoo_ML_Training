@@ -1,13 +1,26 @@
 import torch
+import numpy as np
 
 from sklearn.metrics import precision_recall_fscore_support
 
 from cockatoo_ml.registry import MetricsConfig, LabelConfig
+from cockatoo_ml.registry.column_mapping import DatasetColumnMapping
 
-def compute_metrics(eval_pred):
+def compute_metrics(eval_pred, thresholds=None):
     # compute metrics from eval predictions
     logits, labels = eval_pred
-    preds = (torch.sigmoid(torch.tensor(logits)) > MetricsConfig.PREDICTION_THRESHOLD).numpy().astype(int)
+    probs = torch.sigmoid(torch.tensor(logits)).numpy()
+    
+    # always apply per-label thresholds if available, otherwise use default threshold for all labels (static single value)
+    preds = np.zeros_like(probs, dtype=int)
+    for i, label in enumerate(LabelConfig.ACTIVE_LABELS):
+        # custom thresh overrides label thresh which overrides default thresh
+        if thresholds is not None and label in thresholds:
+            threshold = thresholds[label]
+
+        else:
+            threshold = DatasetColumnMapping.LABEL_THRESHOLDS.get(label, MetricsConfig.PREDICTION_THRESHOLD)
+        preds[:, i] = (probs[:, i] > threshold).astype(int)
 
     # per-label metrics
     p_all, r_all, f1_all, support = precision_recall_fscore_support(
