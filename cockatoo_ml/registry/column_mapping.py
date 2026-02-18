@@ -54,7 +54,7 @@ class DatasetColumnMapping:
         }
     }
     
-    # Unified label categories and their thresholds
+    # unified label categories and their thresholds
     LABEL_THRESHOLDS = {
         'scam': 0.5,
         'violence': 0.5,
@@ -78,6 +78,13 @@ class DatasetColumnMapping:
         'toxicchat': TOXICCHAT,
         'jigsaw': JIGSAW,
     }
+
+    # or: if any column indicates label is present, label is 1
+    # and: all columns must indicate label is present to label as 1
+    # max: take max value across columns (useful for continuous scores)
+    # mean: take mean value across columns (useful for continuous scores)
+
+    DATASET_MERGING_STRATEGY = 'or'
     
     @classmethod
     def get_mapping(cls, dataset_name):
@@ -102,13 +109,13 @@ class DatasetColumnMapping:
         return cls.LABEL_THRESHOLDS.get(label_name, default)
 
 
-def merge_multi_column_labels(df, columns, merge_strategy='or'):
+def merge_multi_column_labels(df, columns, merge_strategy=DatasetColumnMapping.DATASET_MERGING_STRATEGY):
     # strategy based merging multiple columns for a label:
     # 'or' (default): label is 1 if any column is 1
     # 'and': label is 1 only if all columns are 1
     # 'max': take max value across columns (useful for continuous scores)
     # 'mean': take mean value across columns (useful for continuous scores)
-    
+
     if isinstance(columns, str):
         return df[columns].astype(int)
     
