@@ -53,6 +53,15 @@ pip uninstall torch torchvision torchaudio -y # just in case torch exists in you
 pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu126
 ```
 
+Tensorboard requires `pkg_resources`. This is buggy in newer Python versions. If you have problems getting Tensorboard running, try running:
+
+```bash
+pip uninstall setuptools
+pip install setuptools==81.0
+```
+
+And then run the Tensorboard entrypoint as normal.
+
 Verify that torch is installed correctly and can access your GPU:
 
 ```bash
