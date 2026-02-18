@@ -4,66 +4,54 @@ from datasets import Dataset, DatasetDict
 
 from sklearn.model_selection import train_test_split
 
-from cockatoo_ml.registry import LabelConfig, DatasetTypeConfig, DataSplitConfig, DatasetColumns, DataDedupConfig, RebalancingPolicy
+from cockatoo_ml.registry import LabelConfig, DataSplitConfig, DatasetColumns, DataDedupConfig, RebalancingPolicy
+from cockatoo_ml.registry.dataset_label_mapping import get_dataset_label_mapping
+
 from cockatoo_ml.logger.context import data_processing_logger as logger
 
 from train.rebalancing import rebalance_dataset, check_and_compensate_weight_ratio
 
 # the data processor takes in the loaded datasets, applies appropriate labels, combines them, and splits into train/val/test sets for training
 def apply_labels_by_type(df, dataset_type):
-    # apply appropriate labeling logic based on dataset type and return dataframe with text and labels columns
+    # expected raw label columns depend on dataset
+    # these are extracted by data_loaders and need to be mapped to active labels
     
-    if dataset_type == DatasetTypeConfig.PHISHING:
-        df[DatasetColumns.LABELS_COL] = [LabelConfig.scam_label() for _ in range(len(df))]
-        cols_to_keep = [DatasetColumns.TEXT_COL, DatasetColumns.LABELS_COL]
-        # include image column if present
-
-        if 'image' in df.columns:
-            cols_to_keep.append('image')
-            
-        return df[cols_to_keep]
+    cols_to_keep = [DatasetColumns.TEXT_COL]
     
-    elif dataset_type == DatasetTypeConfig.HATE_SPEECH:
-        df['harassment'] = (df[DatasetColumns.HATE_SPEECH_SCORE_COL] > LabelConfig.HATE_SPEECH_THRESHOLD).astype(int)
-        df[DatasetColumns.LABELS_COL] = df['harassment'].apply(lambda x: LabelConfig.make_labels(harassment=x))
-        cols_to_keep = [DatasetColumns.TEXT_COL, DatasetColumns.LABELS_COL]
-        if 'image' in df.columns:
-            cols_to_keep.append('image')
-
-        return df[cols_to_keep]
+    # get available label columns anything not text column
+    label_cols = [c for c in df.columns if c != DatasetColumns.TEXT_COL]
     
-    elif dataset_type == DatasetTypeConfig.TWEET_HATE:
-        df[DatasetColumns.LABELS_COL] = df[DatasetColumns.LABEL_COL].apply(lambda x: LabelConfig.make_labels(harassment=x))
-        cols_to_keep = [DatasetColumns.TEXT_COL, DatasetColumns.LABELS_COL]
-        if 'image' in df.columns:
-            cols_to_keep.append('image')
-
-        return df[cols_to_keep]
-    
-    elif dataset_type == DatasetTypeConfig.TOXICCHAT:
-        df[DatasetColumns.LABELS_COL] = df[DatasetColumns.TOXICITY_COL].apply(lambda x: LabelConfig.make_labels(harassment=x))
-        cols_to_keep = [DatasetColumns.TEXT_COL, DatasetColumns.LABELS_COL]
-        if 'image' in df.columns:
-            cols_to_keep.append('image')
-
-        return df[cols_to_keep]
-    
-    elif dataset_type == DatasetTypeConfig.JIGSAW:
-        df['harassment'] = (df[DatasetColumns.TOXICITY_COL] > LabelConfig.TOXICITY_THRESHOLD).astype(int)
-        df[DatasetColumns.LABELS_COL] = df['harassment'].apply(lambda x: LabelConfig.make_labels(harassment=x))
-        cols_to_keep = [DatasetColumns.TEXT_COL, DatasetColumns.LABELS_COL]
-        if 'image' in df.columns:
-            cols_to_keep.append('image')
-            
-        return df[cols_to_keep]
-    
+    if not label_cols:
+        logger.warning(f"No label columns found for {dataset_type}")
+        df[DatasetColumns.LABELS_COL] = [[0] * len(LabelConfig.ACTIVE_LABELS) for _ in range(len(df))]
     else:
-        raise ValueError(f"Unknown dataset type: {dataset_type}")
+        # build label vector for each row using available labels
+        def build_label_vector(row):
+            label_dict = {}
+            for label_col in label_cols:
+                # label_col name is the label ('scam', 'toxicity', etc.)
+                label_dict[label_col] = row[label_col]
+            return LabelConfig.make_labels(**label_dict)
+        
+        df[DatasetColumns.LABELS_COL] = df.apply(build_label_vector, axis=1)
+    
+    cols_to_keep.append(DatasetColumns.LABELS_COL)
+    
+    # include image column if present
+    if 'image' in df.columns:
+        cols_to_keep.append('image')
+    
+    # track dataset source for label masking
+    df['_dataset_source'] = dataset_type
+    cols_to_keep.append('_dataset_source')
+    
+    return df[cols_to_keep]
 
 def combine_datasets(datasets):
-    # combine the datasets into one dataframe, applying appropriate labels and handling duplicates
+    # combine multiple datasets into one dataframe, applying labels and handling duplicates according to policy
 
     labeled_dfs = []
+    mapping = get_dataset_label_mapping()
     
     # collect and label each dataframe
     for df, dataset_type in datasets:
@@ -152,14 +140,30 @@ def combine_datasets(datasets):
 
 
 def split_dataset(combined_df, test_size=None, val_size=None, random_state=None):
-    # split the dataset into train/val/test sets with stratification
+    # splits dataset into train/validation/test sets with stratification and masking
     if test_size is None:
         test_size = DataSplitConfig.TEST_SIZE
     if val_size is None:
         val_size = DataSplitConfig.VAL_SIZE
     if random_state is None:
         random_state = DataSplitConfig.RANDOM_STATE
-
+    
+    mapping = get_dataset_label_mapping()
+    
+    # add label mask column based on dataset source
+    # this tells the trainer which labels should be evaluated for this sample
+    def get_label_mask(dataset_source):
+        try:
+            dataset_labels = mapping.get_labels(dataset_source)
+            return [1 if label in dataset_labels else 0 for label in LabelConfig.ACTIVE_LABELS]
+        
+        except KeyError:
+            # if dataset source not registered, assume all labels are valid
+            logger.warning(f"Unknown dataset source '{dataset_source}' - using all labels for masking")
+            return [1] * len(LabelConfig.ACTIVE_LABELS)
+    
+    combined_df['label_mask'] = combined_df['_dataset_source'].apply(get_label_mask)
+    
     train_df, temp_df = train_test_split(
         combined_df, 
         test_size=test_size, 
