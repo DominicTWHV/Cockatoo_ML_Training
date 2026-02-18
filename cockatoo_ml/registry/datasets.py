@@ -131,6 +131,11 @@ class DataSplitConfig:
     # higher values make weights more uniform, lower values emphasize imbalance more
     WEIGHT_SMOOTHING = 1e-6
 
+    # cap for BCE pos_weight to avoid extreme gradients for very rare classes
+    # if max weight exceeds this, all weights are scaled down proportionally
+    # set to None to disable scaling
+    POS_WEIGHT_MAX = 10.0
+
 
 class WeightRatioThresholds:
     # a config class to prevent/warn against unusual/extreme weights from rebalancing (if applicable)
