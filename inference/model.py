@@ -9,6 +9,8 @@ from transformers import pipeline, AutoTokenizer, AutoModelForSequenceClassifica
 from PIL import Image
 
 from cockatoo_ml.registry import InferenceConfig, ModelConfig, ModelType
+from cockatoo_ml.registry.column_mapping import DatasetColumnMapping
+
 from cockatoo_ml.logger.context import inference_api_server_logger as logger
 
 
@@ -104,6 +106,13 @@ class ThreatClassifier:
                 config = json.load(f)
                 return config.get("id2label", {})
         return {}
+
+    def get_label_thresholds(self) -> Dict[str, float]:
+        # grab label thresholds for inferencing
+        thresholds = {}
+        for label in self.id2label.values():
+            thresholds[label] = DatasetColumnMapping.get_label_threshold(label, default=0.5)
+        return thresholds
 
     def predict(self, text: str, image: Union[str, Image.Image, None] = None) -> Dict:
         # predict endpoint call with optional image support if clip
