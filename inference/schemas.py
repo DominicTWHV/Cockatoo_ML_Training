@@ -1,12 +1,12 @@
 from pydantic import BaseModel, Field
-from typing import Dict, Optional, List
+from typing import Dict, Optional, List, Union
 
 from cockatoo_ml.registry import APIConfig
 
 
 class PredictionRequest(BaseModel):
     text: str = Field(..., min_length=APIConfig.MIN_TEXT_LENGTH, description="Text to classify")
-    threshold: Optional[float] = Field(APIConfig.DEFAULT_THRESHOLD, ge=APIConfig.MIN_THRESHOLD, le=APIConfig.MAX_THRESHOLD, description="Confidence threshold for positive labels")
+    threshold: Optional[Union[float, Dict[str, float]]] = Field(None, description="Confidence threshold for positive labels. Can be a single float for all labels or a dict of per-label thresholds.")
 
 
 class PredictionResponse(BaseModel):
