@@ -12,6 +12,8 @@ from train.trainer import CustomTrainer
 from train.callbacks import LiveMetricsWebhookCallback
 
 from cockatoo_ml.registry import PathConfig, WebhookConfig, CallbackConfig, DataSplitConfig, RebalancingPolicy
+from cockatoo_ml.registry.column_mapping import DatasetColumnMapping
+
 from cockatoo_ml.logger.context import model_training_logger as logger
 
 
@@ -80,6 +82,9 @@ def main():
     # get training args
     training_args = get_training_args()
     
+    # determine which threshold to use (LABEL_THRESHOLDS for eval-only mode)
+    eval_thresholds = DatasetColumnMapping.LABEL_THRESHOLDS if args.eval_only else None
+    
     # define trainer
     trainer = CustomTrainer(
         model=model,
@@ -88,7 +93,8 @@ def main():
         eval_dataset=tokenized_dataset['validation'],
         compute_metrics=compute_metrics,
         processing_class=tokenizer,
-        pos_weight=pos_weight
+        pos_weight=pos_weight,
+        eval_thresholds=eval_thresholds
     )
     
     # hook to metrics server for posting metrics
@@ -119,7 +125,10 @@ def main():
     
     # evaluate the requested split
     eval_split = args.eval_split
-    logger.info(f"Evaluating on {eval_split} set...")
+    if args.eval_only:
+        logger.info(f"Evaluating on {eval_split} set with custom thresholds: {DatasetColumnMapping.LABEL_THRESHOLDS}")
+    else:
+        logger.info(f"Evaluating on {eval_split} set...")
     test_results = trainer.evaluate(tokenized_dataset[eval_split])
     logger.info(f"{eval_split.capitalize()} results: {test_results}")
 
