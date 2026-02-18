@@ -24,7 +24,12 @@ class CustomTrainer(Trainer):
         label_mask = inputs.pop("label_mask", None)  # extract mask if present
         
         outputs = model(**inputs)
-        logits = outputs.get("logits")
+        if isinstance(outputs, dict):
+            # support models that return dicts (e.g. with 'logits' key) or objects with attributes
+            logits = outputs.get("logits")
+
+        else:
+            logits = outputs.logits
         
         device = logits.device
         dtype = logits.dtype
@@ -61,4 +66,6 @@ class CustomTrainer(Trainer):
         else:
             # no masking, use standard mean reduction
             loss = loss_per_element.mean()
+
+        return (loss, outputs) if return_outputs else loss
         
