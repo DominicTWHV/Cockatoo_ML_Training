@@ -2,11 +2,25 @@ import os
 import pandas as pd
 
 from cockatoo_ml.registry import DatasetPaths, DatasetColumns, PathConfig
+from cockatoo_ml.registry.column_mapping import DatasetColumnMapping, merge_multi_column_labels, apply_threshold
+
 from cockatoo_ml.logger.context import data_processing_logger as logger
 
 
-def find_text_column(df):
-    # find the first matching text candidate column in dframe
+def find_text_column(df, preferred_cols=None):
+    # find text col in dataframe using preferred columns or fallback candidates
+    if preferred_cols:
+        if isinstance(preferred_cols, str):
+            if preferred_cols in df.columns:
+                logger.info(f"Found text column: {preferred_cols}")
+                return preferred_cols
+        else:
+            for col in preferred_cols:
+                if col in df.columns:
+                    logger.info(f"Found text column: {col}")
+                    return col
+    
+    # fallback to text candidates
     for col in DatasetColumns.TEXT_CANDIDATES:
         if col in df.columns:
             logger.info(f"Found text column: {col}")
@@ -15,25 +29,78 @@ def find_text_column(df):
     return None
 
 
+def extract_labels_from_df(df, mapping, dataset_name):
+    # extract and merge labels from dataframe using column mapping
+
+    if mapping is None:
+        logger.error(f"No mapping found for {dataset_name}")
+        return None
+    
+    text_col = mapping.get('text_col')
+    label_specs = mapping.get('labels', {})
+    
+    # check text column exists
+    if text_col not in df.columns:
+        logger.warning(f"{dataset_name}: Text column '{text_col}' not found. Available: {df.columns.tolist()}")
+        return None
+    
+    # start with text column
+    result_df = df[[text_col]].copy()
+    result_df = result_df.rename(columns={text_col: DatasetColumns.TEXT_COL})
+    
+    # extract each label
+    for label_name, col_spec in label_specs.items():
+        if isinstance(col_spec, list):
+
+            # multiple columns to merge
+            missing_cols = [c for c in col_spec if c not in df.columns]
+            available_cols = [c for c in col_spec if c in df.columns]
+            
+            if not available_cols:
+                logger.warning(f"{dataset_name}: Label '{label_name}' columns {col_spec} not found")
+                result_df[label_name] = 0
+
+            else:
+                if missing_cols:
+                    logger.info(f"{dataset_name}: Using available columns for '{label_name}': {available_cols}")
+                
+                # merge with OR strategy (any column = 1 means label is 1) | or is default
+                result_df[label_name] = merge_multi_column_labels(df, available_cols, 'or')
+        else:
+            # single column
+            if col_spec not in df.columns:
+                logger.warning(f"{dataset_name}: Label column '{col_spec}' for '{label_name}' not found")
+                result_df[label_name] = 0
+
+            else:
+                # apply threshold for continuous columns, otherwise convert to int
+                if df[col_spec].dtype in [float, 'float32', 'float64']:
+                    threshold = DatasetColumnMapping.get_label_threshold(label_name)
+                    result_df[label_name] = apply_threshold(df[col_spec], threshold)
+
+                else:
+                    result_df[label_name] = df[col_spec].astype(int)
+    
+    return result_df
+
+
 def load_phishing_dataset(base_dir=None):
-    # load the phishing dataset from json file (combined_reduced.json) and find text col
     if base_dir is None:
         base_dir = PathConfig.BASE_DATA_DIR
 
     phish_path = os.path.join(base_dir, DatasetPaths.PHISHING_DIR, DatasetPaths.PHISHING_FILE)
     if os.path.exists(phish_path):
         df_phish = pd.read_json(phish_path)
-        text_col = find_text_column(df_phish)
-
-        if text_col:
-            logger.info(f"Phishing raw columns: {df_phish.columns.tolist()}")
-            df_phish = df_phish[[text_col]].dropna().rename(columns={text_col: DatasetColumns.TEXT_COL})
-            logger.info(f"Phishing loaded: {len(df_phish)} samples (text col: {text_col})")
-            return df_phish, 'phishing'
+        logger.info(f"Phishing raw columns: {df_phish.columns.tolist()}")
         
-        else:
-            logger.warning("Phishing: No text column found - skipping")
-
+        mapping = DatasetColumnMapping.get_mapping('phishing')
+        df_phish = extract_labels_from_df(df_phish, mapping, 'phishing')
+        
+        if df_phish is not None:
+            df_phish = df_phish.dropna(subset=[DatasetColumns.TEXT_COL])
+            logger.info(f"Phishing loaded: {len(df_phish)} samples")
+            return df_phish, 'phishing'
+    
     else:
         logger.warning("Phishing file not found")
 
@@ -41,7 +108,6 @@ def load_phishing_dataset(base_dir=None):
 
 
 def load_hate_speech_dataset(base_dir=None):
-    # load the measuring hate speech dataset from parquet and find text and hate score cols
     if base_dir is None:
         base_dir = PathConfig.BASE_DATA_DIR
         
@@ -51,15 +117,15 @@ def load_hate_speech_dataset(base_dir=None):
 
     if os.path.exists(hate_path):
         df_hate = pd.read_parquet(hate_path)
-
-        if DatasetColumns.TEXT_COL in df_hate.columns and DatasetColumns.HATE_SPEECH_SCORE_COL in df_hate.columns:
-            logger.info(f"Measuring hate raw columns: {df_hate.columns.tolist()}")
-            df_hate = df_hate[[DatasetColumns.TEXT_COL, DatasetColumns.HATE_SPEECH_SCORE_COL]].dropna()
+        logger.info(f"Measuring hate raw columns: {df_hate.columns.tolist()}")
+        
+        mapping = DatasetColumnMapping.get_mapping('hate_speech')
+        df_hate = extract_labels_from_df(df_hate, mapping, 'hate_speech')
+        
+        if df_hate is not None:
+            df_hate = df_hate.dropna(subset=[DatasetColumns.TEXT_COL])
             logger.info(f"Measuring hate loaded: {len(df_hate)} samples")
             return df_hate, 'hate_speech'
-        
-        else:
-            logger.warning(f"Measuring hate: Expected columns '{DatasetColumns.TEXT_COL}' and '{DatasetColumns.HATE_SPEECH_SCORE_COL}' not found - skipping")
 
     else:
         logger.warning("Measuring hate parquet not found")
@@ -68,45 +134,44 @@ def load_hate_speech_dataset(base_dir=None):
 
 
 def load_tweet_hate_dataset(base_dir=None):
-    # load the tweet_eval hate speech dataset from parquet and find text and label cols
     if base_dir is None:
         base_dir = PathConfig.BASE_DATA_DIR
 
     tweet_hate_path = os.path.join(base_dir, DatasetPaths.TWEET_EVAL_DIR, DatasetPaths.TWEET_EVAL_HATE_SUBDIR, DatasetPaths.TWEET_EVAL_FILE)
     if os.path.exists(tweet_hate_path):
         df_tweet = pd.read_parquet(tweet_hate_path)
-
-        if DatasetColumns.TEXT_COL in df_tweet.columns and DatasetColumns.LABEL_COL in df_tweet.columns:
-            logger.info(f"Tweet hate raw columns: {df_tweet.columns.tolist()}")
-            df_tweet = df_tweet[[DatasetColumns.TEXT_COL, DatasetColumns.LABEL_COL]].dropna()
+        logger.info(f"Tweet hate raw columns: {df_tweet.columns.tolist()}")
+        
+        mapping = DatasetColumnMapping.get_mapping('tweet_hate')
+        df_tweet = extract_labels_from_df(df_tweet, mapping, 'tweet_hate')
+        
+        if df_tweet is not None:
+            df_tweet = df_tweet.dropna(subset=[DatasetColumns.TEXT_COL])
             logger.info(f"Tweet hate loaded: {len(df_tweet)} samples")
             return df_tweet, 'tweet_hate'
-        
-        else:
-            logger.warning(f"Tweet hate: Expected '{DatasetColumns.TEXT_COL}' and '{DatasetColumns.LABEL_COL}' not found - skipping")
 
     return None, None
 
 
 def load_toxicchat_dataset(base_dir=None):
-    # load the toxic chat dataset from csv and find text and toxicity cols
     if base_dir is None:
         base_dir = PathConfig.BASE_DATA_DIR
 
     toxic_path = os.path.join(base_dir, DatasetPaths.TOXICCHAT_DIR, DatasetPaths.HATE_SPEECH_SUBDIR, DatasetPaths.TOXICCHAT_VERSION, DatasetPaths.TOXICCHAT_FILE)
     if os.path.exists(toxic_path):
         df_toxic = pd.read_csv(toxic_path)
-        text_col = find_text_column(df_toxic)
-
-        if text_col and DatasetColumns.TOXICITY_COL in df_toxic.columns:
-            logger.info(f"ToxicChat raw columns: {df_toxic.columns.tolist()}")
-            df_toxic = df_toxic[[text_col, DatasetColumns.TOXICITY_COL]].dropna()
-            df_toxic = df_toxic.rename(columns={text_col: DatasetColumns.TEXT_COL})
-            logger.info(f"ToxicChat loaded: {len(df_toxic)} samples (text col: {text_col})")
+        logger.info(f"ToxicChat raw columns: {df_toxic.columns.tolist()}")
+        
+        mapping = DatasetColumnMapping.get_mapping('toxicchat')
+        df_toxic = extract_labels_from_df(df_toxic, mapping, 'toxicchat')
+        
+        if df_toxic is not None:
+            df_toxic = df_toxic.dropna(subset=[DatasetColumns.TEXT_COL])
+            logger.info(f"ToxicChat loaded: {len(df_toxic)} samples")
             return df_toxic, 'toxicchat'
         
         else:
-            logger.warning(f"ToxicChat: No suitable text column or '{DatasetColumns.TOXICITY_COL}' missing - skipping. Columns were: {df_toxic.columns.tolist()}")
+            logger.warning(f"ToxicChat: Label extraction failed")
 
     else:
         logger.warning("ToxicChat train csv not found")
@@ -115,35 +180,29 @@ def load_toxicchat_dataset(base_dir=None):
 
 
 def load_jigsaw_dataset(base_dir=None):
-    # load the jigsaw bias dataset
     if base_dir is None:
         base_dir = PathConfig.BASE_DATA_DIR
         
     jigsaw_path = os.path.join(base_dir, DatasetPaths.JIGSAW_DIR, DatasetPaths.JIGSAW_FILE)
     if os.path.exists(jigsaw_path):
         df_jig = pd.read_csv(jigsaw_path)
-        text_col = find_text_column(df_jig)
-        toxicity_col = next((c for c in df_jig.columns if 'toxic' in c.lower() or 'target' in c.lower()), None)
-
-        if text_col and toxicity_col:
-            logger.info(f"Jigsaw raw columns: {df_jig.columns.tolist()}")
-            df_jig = df_jig[[text_col, toxicity_col]].dropna()
-            df_jig = df_jig.rename(columns={text_col: DatasetColumns.TEXT_COL, toxicity_col: DatasetColumns.TOXICITY_COL})
+        logger.info(f"Jigsaw raw columns: {df_jig.columns.tolist()}")
+        
+        mapping = DatasetColumnMapping.get_mapping('jigsaw')
+        df_jig = extract_labels_from_df(df_jig, mapping, 'jigsaw')
+        
+        if df_jig is not None:
+            df_jig = df_jig.dropna(subset=[DatasetColumns.TEXT_COL])
             logger.info(f"Jigsaw loaded: {len(df_jig)} samples")
             return df_jig, 'jigsaw'
         
         else:
-            logger.warning(f"Jigsaw: No text/toxicity column found - skipping. Columns: {df_jig.columns.tolist()}")
+            logger.warning(f"Jigsaw: Label extraction failed")
 
     return None, None
 
 
 def load_all_datasets(base_dir=None):
-    # unifed function to all datasets
-    if base_dir is None:
-        base_dir = PathConfig.BASE_DATA_DIR
-        
-    logger.info("Loading and preprocessing datasets...")
     
     loaders = [
         load_phishing_dataset,
