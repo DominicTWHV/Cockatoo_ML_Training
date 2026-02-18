@@ -169,8 +169,34 @@ def split_dataset(combined_df, test_size=None, val_size=None, random_state=None)
         counts = label_tuples.value_counts()
         rare_classes = counts[counts < 2]
         if not rare_classes.empty:
+            details = []
+            
+            for label_tuple, count in rare_classes.items():
+                active_labels = [
+                    label
+                    for label, is_on in zip(LabelConfig.ACTIVE_LABELS, label_tuple)
+                    if is_on == 1
+                ]
+                if not active_labels:
+                    active_labels = ["<none>"]
+
+                source_counts = df.loc[
+                    label_tuples == label_tuple, "_dataset_source"
+                ].value_counts().to_dict()
+
+                details.append(
+                    {
+                        "label_tuple": label_tuple,
+                        "active_labels": active_labels,
+                        "count": int(count),
+                        "sources": source_counts,
+                    }
+                )
+
             logger.warning(
-                f"Stratified split disabled for {split_name}: classes with <2 samples: {rare_classes.to_dict()}"
+                "Stratified split disabled for %s: classes with <2 samples: %s",
+                split_name,
+                details,
             )
             return None
         
