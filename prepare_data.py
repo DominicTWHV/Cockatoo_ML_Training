@@ -1,7 +1,7 @@
 import os
 from train.data_loaders import load_all_datasets
 from train.data_processors import combine_datasets, split_dataset, print_dataset_stats
-from cockatoo_ml.registry import PathConfig, LabelConfig
+from cockatoo_ml.registry import PathConfig, LabelConfig, DataSplitConfig
 from cockatoo_ml.logger.context import data_processing_logger as logger
 
 # entrypoint to prepare data for training
@@ -33,7 +33,11 @@ def main():
 
     # print a few samples of the merged dataset
     logger.info("Sample rows from merged dataset (processed_text):")
-    sample_df = combined_df.head(5).reset_index(drop=True)
+    sample_count = min(5, len(combined_df))
+    sample_df = combined_df.sample(
+        n=sample_count,
+        random_state=DataSplitConfig.RANDOM_STATE
+    ).reset_index(drop=True)
     for i, row in sample_df.iterrows():
         text_preview = str(row.get('text', ''))
         if len(text_preview) > 200:
