@@ -3,7 +3,7 @@ import torch.nn as nn
 
 from transformers import AutoModelForSequenceClassification, CLIPModel
 
-from cockatoo_ml.registry import ModelConfig, LabelConfig, ModelType
+from cockatoo_ml.registry import ModelConfig, LabelConfig, ModelType, DataSplitConfig
 from cockatoo_ml.logger.context import model_training_logger as logger
 
 
@@ -94,6 +94,17 @@ def compute_pos_weight(dataset, class_weights=None):
 
     # handle labels with zero positives to avoid exploding weights
     pos_weight = torch.where(pos_counts > 0, pos_weight, torch.ones_like(pos_weight))
+
+    # optionally scale extreme weights to avoid unstable gradients while preserving ratios
+    max_pos_weight = DataSplitConfig.POS_WEIGHT_MAX
+    if max_pos_weight is not None and max_pos_weight > 0:
+        current_max = float(pos_weight.max().item()) if pos_weight.numel() > 0 else 0.0
+        if current_max > max_pos_weight:
+            scale = max_pos_weight / current_max
+            logger.warning(
+                f"Scaling pos_weight by {scale:.6f} to cap max at {max_pos_weight}."
+            )
+            pos_weight = pos_weight * scale
 
     logger.info(f"Positive weights (per label): {pos_weight.tolist()}")
     return pos_weight
