@@ -11,7 +11,7 @@ from train.config import get_training_args
 from train.trainer import CustomTrainer
 from train.callbacks import LiveMetricsWebhookCallback
 
-from cockatoo_ml.registry import PathConfig, WebhookConfig, CallbackConfig
+from cockatoo_ml.registry import PathConfig, WebhookConfig, CallbackConfig, DataSplitConfig, RebalancingPolicy
 from cockatoo_ml.logger.context import model_training_logger as logger
 
 
@@ -66,10 +66,16 @@ def main():
     else:
         model = load_model()
     
-    # compute pos weight for BCE loss
-    # use pre-computed class weights if available from rebalancing, otherwise compute from dataset
+    # compute pos_weight for BCE loss only when using reweighting policies
     class_weights = getattr(dataset, 'class_weights', None)
-    pos_weight = compute_pos_weight(dataset['train'], class_weights=class_weights) #this would just return class_weights if present (computed during rebalancing)
+    pos_weight = None
+    if DataSplitConfig.REBALANCING_POLICY in (RebalancingPolicy.REWEIGHTING, RebalancingPolicy.COMBINED):
+        # use pre-computed class weights if available from rebalancing, otherwise compute from dataset
+        pos_weight = compute_pos_weight(dataset['train'], class_weights=class_weights)
+        
+    else:
+        if class_weights is not None:
+            logger.info("Dataset rebalancing applied; skipping pos_weight in loss.")
     
     # get training args
     training_args = get_training_args()
