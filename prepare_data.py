@@ -30,6 +30,17 @@ def main():
     save_path = PathConfig.get_processed_data_path()
     dataset.save_to_disk(save_path)
     logger.info(f"Saved to: {save_path}")
+
+    # print a few samples of the merged dataset
+    logger.info("Sample rows from merged dataset (processed_text):")
+    sample_df = combined_df.head(5).reset_index(drop=True)
+    for i, row in sample_df.iterrows():
+        text_preview = str(row.get('text', ''))
+        if len(text_preview) > 200:
+            text_preview = text_preview[:200] + "..."
+        logger.info(
+            f"Sample {i + 1}: text='{text_preview}' | labels={row.get('labels')} | source={row.get('_dataset_source')}"
+        )
     
     # print stats
     print_dataset_stats(combined_df, dataset)
