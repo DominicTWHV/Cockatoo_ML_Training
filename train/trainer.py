@@ -6,10 +6,14 @@ from transformers import Trainer
 class CustomTrainer(Trainer):
     # custom trainer to handle bce loss with pos_weight (or pre-computed class weights) and optional label masking for multi-label classification
     
-    def __init__(self, *args, pos_weight=None, **kwargs):
+    def __init__(self, *args, pos_weight=None, eval_thresholds=None, **kwargs):
+        # extract compute_metrics before calling super().__init__
+        self.compute_metrics_func = kwargs.get('compute_metrics')
+        
         super().__init__(*args, **kwargs)
         # BCEWithLogitsLoss handles the internal conversion to half if needed
         self.pos_weight = pos_weight.to(self.model.device) if pos_weight is not None else None
+        self.eval_thresholds = eval_thresholds  # custom thresholds dict for evaluation (label -> threshold)
 
         if self.pos_weight is not None:
             self.loss_fct = torch.nn.BCEWithLogitsLoss(pos_weight=self.pos_weight, reduction='none')
@@ -68,4 +72,17 @@ class CustomTrainer(Trainer):
             loss = loss_per_element.mean()
 
         return (loss, outputs) if return_outputs else loss
-        
+    
+    def compute_metrics(self, eval_pred):
+        # override compute_metrics to pass custom thresholds if set
+        if self.compute_metrics_func is not None:
+            if self.eval_thresholds is not None:
+                return self.compute_metrics_func(eval_pred, thresholds=self.eval_thresholds)
+            else:
+                # try calling with thresholds parameter, fall back to no parameter if not supported
+                try:
+                    return self.compute_metrics_func(eval_pred, thresholds=None)
+                except TypeError:
+                    return self.compute_metrics_func(eval_pred)
+        return {}
+
