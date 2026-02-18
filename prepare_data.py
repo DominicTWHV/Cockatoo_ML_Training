@@ -1,7 +1,7 @@
 import os
 from train.data_loaders import load_all_datasets
 from train.data_processors import combine_datasets, split_dataset, print_dataset_stats
-from cockatoo_ml.registry import PathConfig
+from cockatoo_ml.registry import PathConfig, LabelConfig
 from cockatoo_ml.logger.context import data_processing_logger as logger
 
 # entrypoint to prepare data for training
@@ -38,8 +38,16 @@ def main():
         text_preview = str(row.get('text', ''))
         if len(text_preview) > 200:
             text_preview = text_preview[:200] + "..."
+        label_vector = row.get('labels') or []
+        active_labels = [
+            label
+            for label, is_on in zip(LabelConfig.ACTIVE_LABELS, label_vector)
+            if is_on == 1
+        ]
+        if not active_labels:
+            active_labels = ["<none>"]
         logger.info(
-            f"Sample {i + 1}: text='{text_preview}' | labels={row.get('labels')} | source={row.get('_dataset_source')}"
+            f"Sample {i + 1}: text='{text_preview}' | labels={active_labels} | source={row.get('_dataset_source')}"
         )
     
     # print stats
