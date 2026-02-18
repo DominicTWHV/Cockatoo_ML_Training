@@ -164,11 +164,23 @@ def split_dataset(combined_df, test_size=None, val_size=None, random_state=None)
     
     combined_df['label_mask'] = combined_df['_dataset_source'].apply(get_label_mask)
     
+    def get_stratify_series(df, split_name):
+        label_tuples = df[DatasetColumns.LABELS_COL].apply(tuple)
+        counts = label_tuples.value_counts()
+        rare_classes = counts[counts < 2]
+        if not rare_classes.empty:
+            logger.warning(
+                f"Stratified split disabled for {split_name}: classes with <2 samples: {rare_classes.to_dict()}"
+            )
+            return None
+        
+        return label_tuples
+
     train_df, temp_df = train_test_split(
-        combined_df, 
-        test_size=test_size, 
-        random_state=random_state, 
-        stratify=combined_df[DatasetColumns.LABELS_COL].apply(tuple)
+        combined_df,
+        test_size=test_size,
+        random_state=random_state,
+        stratify=get_stratify_series(combined_df, "train/temp")
     )
 
     # apply rebalancing policy to training split
@@ -180,10 +192,10 @@ def split_dataset(combined_df, test_size=None, val_size=None, random_state=None)
         class_weights = None
     
     val_df, test_df = train_test_split(
-        temp_df, 
-        test_size=val_size, 
-        random_state=random_state, 
-        stratify=temp_df[DatasetColumns.LABELS_COL].apply(tuple)
+        temp_df,
+        test_size=val_size,
+        random_state=random_state,
+        stratify=get_stratify_series(temp_df, "validation/test")
     )
     
     dataset = DatasetDict({
