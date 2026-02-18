@@ -65,7 +65,8 @@ class TrainingConfig:
 
 
 class MetricsConfig: 
-    # threshold for binary classification
+    # threshold for binary classification (used if no per-label thresholds provided for evaluation)
+    # per-label thresholds override this value, and can be configured in cockatoo_ml/registry/column_mapping.py DatasetColumnMapping.LABEL_THRESHOLDS
     PREDICTION_THRESHOLD = 0.5
     
     # averaging strategy for multi-label metrics
