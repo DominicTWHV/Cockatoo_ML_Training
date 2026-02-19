@@ -178,13 +178,13 @@ Validation endpoint payload:
 The training loop automatically plots evaluation results once available. You can also manualy pass in an evaluation JSON file to generate the evaluation plots:
 
 ```bash
-python train.py --eval-data-json path/to/eval_results.json
+python3 train.py --eval-data-json path/to/eval_results.json
 ```
 
 Or with a custom output directory for the generated plots:
 
 ```bash
-python train.py --plot-dir ./visualizations --eval-data-json path/to/eval_results.json
+python3 train.py --plot-dir ./visualizations --eval-data-json path/to/eval_results.json
 ```
 
 ---
