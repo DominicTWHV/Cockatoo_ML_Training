@@ -4,7 +4,9 @@ from quart import Quart, request, jsonify
 from inference.model import ThreatClassifier
 from inference.schemas import PredictionRequest, PredictionResponse
 from cockatoo_ml.registry import APIConfig
+
 from cockatoo_ml.logger.context import inference_api_server_logger as logger
+from cockatoo_ml.logger.context import request_logger as inference_request_logger
 
 app = Quart(__name__)
 classifier = None
@@ -21,6 +23,8 @@ async def initialize():
 @app.route("/health", methods=["GET"])
 async def health():
     # server health check
+    origin = request.remote_addr
+    inference_request_logger.info(f"Health check received from {origin}")
     return jsonify({"status": "ok", "model": APIConfig.MODEL_NAME})
 
 
@@ -29,12 +33,17 @@ async def predict():
     # inference endpoint for single text input
     try:
         data = await request.get_json()
+        origin = request.remote_addr
+        text = data.get("text", "")
+        threshold = data.get("threshold", "default")
+        inference_request_logger.info(f"Prediction request from {origin} - text length: {len(text)}, threshold: {threshold}")
         req = PredictionRequest(**data)
         
         # run blocking inference in thread pool
         result = await asyncio.to_thread(classifier.predict, req.text)
         
         if "error" in result:
+            inference_request_logger.error(f"Prediction error: {result['error']}")
             return jsonify({"error": result["error"]}), 400
         
         # determine thresholds: use provided or fall back to per-label defaults
@@ -62,13 +71,16 @@ async def predict():
             max_score=float(result["max_score"])
         )
         
+        inference_request_logger.info(f"Prediction response - top_label: {response.top_label}, max_score: {response.max_score}")
         return jsonify(response.model_dump())
     
     except ValueError as e:
+        inference_request_logger.error(f"Validation error: {str(e)}")
         return jsonify({"error": f"Validation error: {str(e)}"}), 422
     
     except Exception as e:
         # catch errors
+        inference_request_logger.error(f"Prediction endpoint error: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 @app.route("/batch", methods=["POST"])
@@ -77,8 +89,11 @@ async def batch_predict():
         data = await request.get_json()
         texts = data.get("texts", [])
         threshold = data.get("threshold", None)
+        origin = request.remote_addr
+        inference_request_logger.info(f"Batch prediction request from {origin} - count: {len(texts)}, threshold: {threshold or 'default'}, sample texts: {[t[:50] for t in texts[:3]]}")
         
         if not texts or not isinstance(texts, list):
+            inference_request_logger.warning(f"Invalid batch request from {origin}: texts is not a non-empty list")
             return jsonify({"error": "texts must be a non-empty list"}), 400
         
         # determine thresholds: use provided or fall back to per-label defaults
@@ -119,9 +134,11 @@ async def batch_predict():
                     "max_score": result["max_score"]
                 })
         
+        inference_request_logger.info(f"Batch prediction response - processed: {len(results)}/{len(texts)}")
         return jsonify({"count": len(results), "results": results})
     
     except Exception as e:
+        inference_request_logger.error(f"Batch prediction endpoint error: {str(e)}")
         return jsonify({"error": str(e)}), 500
 
 
