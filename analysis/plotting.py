@@ -11,6 +11,8 @@ import matplotlib.ticker as ticker
 
 from cockatoo_ml.logger.context import data_processing_logger as logger
 
+from cockatoo_ml.registry import PlottingConfig
+
 
 def _parse_eval_metrics(eval_data: Dict[str, Any]) -> Dict[str, Dict[str, float]]:
     # parse eval metrics and group them by metric type
@@ -36,6 +38,48 @@ def _parse_eval_metrics(eval_data: Dict[str, Any]) -> Dict[str, Dict[str, float]
         grouped_metrics[metric_type][label] = value
     
     return dict(grouped_metrics)
+
+
+def _add_watermark(fig, ax) -> None:
+    """Add a watermark to the chart based on PlottingConfig settings"""
+    if not PlottingConfig.WATERMARK_ENABLED:
+        return
+    
+    # map watermark position to coordinates and alignment
+    if PlottingConfig.WATERMARK_POSITION == 'center':
+        x, y = 0.5, 0.5
+        ha, va = 'center', 'center'
+
+    elif PlottingConfig.WATERMARK_POSITION == 'top':
+        x, y = 0.5, 0.85
+        ha, va = 'center', 'top'
+
+    elif PlottingConfig.WATERMARK_POSITION == 'bottom':
+        x, y = 0.5, 0.15
+        ha, va = 'center', 'bottom'
+
+    elif PlottingConfig.WATERMARK_POSITION == 'top-left':
+        x, y = 0.15, 0.85
+        ha, va = 'left', 'top'
+        
+    elif PlottingConfig.WATERMARK_POSITION == 'top-right':
+        x, y = 0.85, 0.85
+        ha, va = 'right', 'top'
+
+    elif PlottingConfig.WATERMARK_POSITION == 'bottom-left':
+        x, y = 0.15, 0.15
+        ha, va = 'left', 'bottom'
+
+    elif PlottingConfig.WATERMARK_POSITION == 'bottom-right':
+        x, y = 0.85, 0.15
+        ha, va = 'right', 'bottom'
+
+    else:
+        x, y = 0.5, 0.5
+        ha, va = 'center', 'center'
+    
+    # add watermark text
+    fig.text(x, y, PlottingConfig.WATERMARK_TEXT, fontsize=PlottingConfig.WATERMARK_FONTSIZE, color=PlottingConfig.WATERMARK_COLOR, alpha=PlottingConfig.WATERMARK_ALPHA, ha=ha, va=va, rotation=PlottingConfig.WATERMARK_ROTATION, transform=fig.transFigure, zorder=0)
 
 
 def _create_metric_chart(metric_type: str, metric_data: Dict[str, float], output_path: Path, figsize: tuple = (12, 6)) -> None:
@@ -73,6 +117,9 @@ def _create_metric_chart(metric_type: str, metric_data: Dict[str, float], output
     
     # tight layout to prevent label cutoff
     plt.tight_layout()
+    
+    # add watermark if enabled
+    _add_watermark(fig, ax)
     
     # save figure
     fig.savefig(output_path, dpi=150, bbox_inches='tight')
