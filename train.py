@@ -1,4 +1,7 @@
 import argparse
+import json
+
+from pathlib import Path
 
 from dotenv import load_dotenv
 
@@ -11,7 +14,9 @@ from train.config import get_training_args
 from train.trainer import CustomTrainer
 from train.callbacks import LiveMetricsWebhookCallback
 
-from cockatoo_ml.registry import PathConfig, WebhookConfig, CallbackConfig, DataSplitConfig, RebalancingPolicy
+from analysis.plotting import plot_eval_metrics
+
+from cockatoo_ml.registry import PathConfig, WebhookConfig, CallbackConfig, DataSplitConfig, RebalancingPolicy, ModelConfig
 from cockatoo_ml.registry.column_mapping import DatasetColumnMapping
 
 from cockatoo_ml.logger.context import model_training_logger as logger
@@ -35,7 +40,45 @@ def main():
         choices=["test", "validation"],
         help="Dataset split to eval model on when --eval-only is set (default: test).",
     )
+    parser.add_argument(
+        "--eval-data-json",
+        type=str,
+        default=None,
+        help="Path to JSON file containing evaluation metrics. If provided, plots will be generated from this data instead of running evaluation.",
+    )
+    parser.add_argument(
+        "--plot-dir",
+        type=str,
+        default="graph",
+        help="Directory to save evaluation plots (default: graph).",
+    )
     args = parser.parse_args()
+
+    # if eval data json arg is passed, just generate plots
+    if args.eval_data_json:
+        logger.info(f"Loading evaluation data from: {args.eval_data_json}")
+        json_path = Path(args.eval_data_json)
+        
+        if not json_path.exists():
+            raise FileNotFoundError(f"Eval data JSON file not found: {args.eval_data_json}")
+        
+        with open(json_path, 'r') as f:
+            test_results = json.load(f)
+        
+        logger.info(f"Loaded eval data from JSON: {test_results}")
+        
+        # generate plots from json data
+        try:
+            experiment_name = CallbackConfig.DEFAULT_EXPERIMENT_ID
+            model_name = ModelConfig.MODEL_TYPE
+            
+            plot_dir = plot_eval_metrics(eval_data=test_results, experiment_name=experiment_name, model_name=model_name, epoch_num=None, output_dir=args.plot_dir)
+            logger.info(f"Evaluation plots saved to: {plot_dir.absolute()}")
+
+        except Exception as e:
+            logger.warning(f"Failed to generate evaluation plots: {e}")
+        
+        return
 
     # load the preprocessed dataset
     dataset = load_from_disk(PathConfig.get_processed_data_path())
@@ -125,12 +168,31 @@ def main():
     
     # evaluate the requested split
     eval_split = args.eval_split
+    
+    # run evaluation
     if args.eval_only:
         logger.info(f"Evaluating on {eval_split} set with custom thresholds: {DatasetColumnMapping.LABEL_THRESHOLDS}")
     else:
         logger.info(f"Evaluating on {eval_split} set...")
+    
     test_results = trainer.evaluate(tokenized_dataset[eval_split])
+    
     logger.info(f"{eval_split.capitalize()} results: {test_results}")
+    
+    # generate and save evaluation plots
+    try:
+        experiment_name = CallbackConfig.DEFAULT_EXPERIMENT_ID
+        model_name = ModelConfig.MODEL_TYPE
+        # extract epoch number if available from training args
+        epoch_num = None
+        if hasattr(trainer, 'state') and trainer.state is not None:
+            epoch_num = int(trainer.state.epoch) if trainer.state.epoch else None
+        
+        plot_dir = plot_eval_metrics(eval_data=test_results, experiment_name=experiment_name, model_name=model_name, epoch_num=epoch_num, output_dir=args.plot_dir)
+        logger.info(f"Evaluation plots saved to: {plot_dir.absolute()}")
+
+    except Exception as e:
+        logger.warning(f"Failed to generate evaluation plots: {e}")
 
     #done!
 
