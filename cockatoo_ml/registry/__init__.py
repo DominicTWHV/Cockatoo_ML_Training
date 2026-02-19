@@ -4,6 +4,7 @@ from .datasets import DatasetSources, DatasetPaths, DatasetColumns, DataSplitCon
 from .labels import LabelConfig
 from .model import ModelConfig, InferenceConfig, ModelType
 from .paths import PathConfig
+from .plotting import PlottingConfig
 from .training import TrainingConfig, MetricsConfig, CallbackConfig
 
 __all__ = [
@@ -21,6 +22,7 @@ __all__ = [
     'ModelConfig',
     'ModelType',
     'PathConfig',
+    'PlottingConfig',
     'RebalancingPolicy',
     'TrainingConfig',
     'WebhookConfig',
