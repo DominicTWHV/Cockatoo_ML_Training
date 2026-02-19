@@ -98,5 +98,6 @@ Werkzeug>=3.1.5
 xxhash>=3.6.0
 yarl>=1.22.0
 python-dotenv>=1.2.1
+matplotlib>=3.8.0
 
 setuptools==81.0
