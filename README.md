@@ -202,12 +202,12 @@ source venv/bin/activate
 hypercorn app:app --bind 0.0.0.0:8000
 ```
 
-**Endpoints:**
+## Endpoints:
 
-/health
-- Method: GET
-- Description: Checks if the server is responding and healthy. Returns a simple JSON response indicating the status.
-- Response Body:
+**Endpoint:** `/health`
+**Method:** `GET`
+**Description:** Checks if the server is responding and healthy. Returns a simple JSON response indicating the status and the active model version.
+
 ```json
 {
   "status": "ok",
@@ -215,76 +215,82 @@ hypercorn app:app --bind 0.0.0.0:8000
 }
 ```
 
-/predict
-- Method: POST
-- Description: Accepts a JSON payload containing the text to classify and an optional confidence threshold.
-- Request Body:
+---
+
+**Endpoint:** `/predict`
+**Method:** `POST`
+**Description:** Classifies a single string. Supports a global threshold or a per-label mapping.
+**Request Body:**
+
 ```json
 {
   "text": "The text to classify",
-  "threshold": 0.5
+  "threshold": 0.5 
 }
+
 ```
 
-- Response Body (sample, not exhaustive):
+> **Note:** `threshold` is optional. It can be a **float** (0.5), a **dictionary** (`{"LABEL_1": 0.8, "LABEL_2": 0.4}`), or `null`. If `null`, the system defaults to per-label thresholds defined in the classifier configuration.
+
+**Response Body:**
 
 ```json
 {
-  "error": null,
-  "max_score": 0.9944,
-  "positive_labels": [
-    "LABEL_3"
-  ],
+  "text": "The text to classify",
   "predictions": {
+    "LABEL_1": 0.12,
     "LABEL_3": 0.9944
   },
-  "text": "input text here",
-  "top_label": "LABEL_3"
+  "positive_labels": ["LABEL_3"],
+  "top_label": "LABEL_3",
+  "max_score": 0.9944
 }
+
 ```
 
-/batch
-- Method: POST
-- Description: Accepts a JSON payload containing a list of texts to classify and an optional confidence threshold.
-- Request Body:
+---
+
+**Endpoint:** `/batch`
+**Method:** `POST`
+**Description:** Classifies a list of strings in a single request.
+**Request Body:**
+
 ```json
 {
   "texts": [
     "First text to classify",
     "Second text to classify"
   ],
-  "threshold": 0.5
+  "threshold": {
+    "LABEL_3": 0.90
+  }
 }
+
 ```
 
- - Response Body (sample, not exhaustive):
+**Response Body:**
 
 ```json
 {
   "count": 2,
   "results": [
     {
-      "error": null,
-      "max_score": 0.9944,
+      "text": "First text to classify",
+      "predictions": { "LABEL_3": 0.9944, "LABEL_1": 0.05 },
       "positive_labels": ["LABEL_3"],
-      "predictions": {
-        "LABEL_3": 0.9944
-      },
-      "text": "first text to classify",
-      "top_label": "LABEL_3"
+      "top_label": "LABEL_3",
+      "max_score": 0.9944
     },
     {
-      "error": null,
-      "max_score": 0.9944,
-      "positive_labels": ["LABEL_3"],
-      "predictions": {
-        "LABEL_3": 0.9944
-      },
-      "text": "second text to classify",
-      "top_label": "LABEL_3"
+      "text": "Second text to classify",
+      "predictions": { "LABEL_3": 0.85, "LABEL_1": 0.10 },
+      "positive_labels": [],
+      "top_label": "LABEL_3",
+      "max_score": 0.85
     }
   ]
 }
+
 ```
 
 ## Licensing:
