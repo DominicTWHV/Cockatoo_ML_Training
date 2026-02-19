@@ -63,6 +63,7 @@ async def predict():
         ]
         
         # call into the inference helper to get predictions and format response
+        # return all labels and confidence
         response = PredictionResponse(
             text=req.text,
             predictions=result["predictions"],
@@ -71,7 +72,7 @@ async def predict():
             max_score=float(result["max_score"])
         )
         
-        inference_request_logger.info(f"Prediction response - top_label: {response.top_label}, max_score: {response.max_score}")
+        inference_request_logger.info(f"Prediction response - all labels: {list(response.predictions.keys())}, positive_labels: {positive_labels}")
         return jsonify(response.model_dump())
     
     except ValueError as e:
@@ -126,6 +127,7 @@ async def batch_predict():
                         label for label, score in result["predictions"].items()
                         if score >= single_threshold
                     ]
+                # return all labels
                 results.append({
                     "text": text,
                     "predictions": result["predictions"],
@@ -134,7 +136,7 @@ async def batch_predict():
                     "max_score": result["max_score"]
                 })
         
-        inference_request_logger.info(f"Batch prediction response - processed: {len(results)}/{len(texts)}")
+        inference_request_logger.info(f"Batch prediction response - processed: {len(results)}/{len(texts)} with all labels returned")
         return jsonify({"count": len(results), "results": results})
     
     except Exception as e:
