@@ -18,8 +18,7 @@ echo "  POST /predict         - Single inference"
 echo "  POST /batch           - Batch inference"
 echo ""
 
-source venv/bin/activate
+export HOST PORT WORKERS
 
-hypercorn app:app \
-  --bind "$HOST:$PORT" \
-  --workers "$WORKERS" \
+screen -dmS inference bash -lc 'cd /home/dominic/orion && source venv/bin/activate && hypercorn app:app --bind "$HOST:$PORT" --workers "$WORKERS"'
+screen -r inference
