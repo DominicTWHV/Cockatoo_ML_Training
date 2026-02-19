@@ -75,29 +75,17 @@ class ThreatClassifier:
 
     def _load_text_model(self, model_path: str):
         
-        # load text model with pipeline
-        try:
-            self.classifier = pipeline(
-                "text-classification",
-                model=model_path,
-                device=self.device,
-                torch_dtype=torch.float16 if self.device == 0 else None,
-                return_all_scores=True,
-                batch_size=InferenceConfig.BATCH_SIZE,
-            )
-            logger.info("Pipeline loaded successfully")
+        # For multi-label classification, we must use manual inference (not pipeline)
+        # because the text-classification pipeline uses softmax (single-label), not sigmoid (multi-label)
+        self.tokenizer = AutoTokenizer.from_pretrained(model_path)
+        self.model = AutoModelForSequenceClassification.from_pretrained(model_path)
 
-        except Exception as e:
-            logger.warning(f"Pipeline load failed: {e} | Falling back to manual loading")
-            self.tokenizer = AutoTokenizer.from_pretrained(model_path)
-            self.model = AutoModelForSequenceClassification.from_pretrained(model_path)
+        if self.device == 0:
+            self.model = self.model.cuda()
 
-            if self.device == 0:
-                self.model = self.model.cuda()
-
-            self.model.eval()
-            self.classifier = None
-            logger.info("Fallback manual model loaded")
+        self.model.eval()
+        self.classifier = None
+        logger.info("Text model loaded with manual inference for multi-label classification")
 
     def _get_id2label(self, model_path: str) -> Dict[int, str]:
         config_path = Path(model_path) / "config.json"
@@ -163,40 +151,28 @@ class ThreatClassifier:
         }
 
     def _predict_text(self, text: str) -> Dict:
-        # prediction pipeline for deberta model (images not accepted)
+        # prediction inference for multi-label text classification using manual inference
+        # this uses sigmoid activation (not softmax) to return independent scores for each label
 
-        if self.classifier is not None:
-            raw_results = self.classifier(
-                text, 
-                truncation=InferenceConfig.TRUNCATION, 
-                max_length=InferenceConfig.INFERENCE_MAX_LENGTH
-            )
-            
-            if isinstance(raw_results, list) and len(raw_results) > 0:
-                scores_list = raw_results[0] if isinstance(raw_results[0], list) else raw_results
-                probs = {item['label']: round(item['score'], 4) for item in scores_list}
-                
-            else:
-                return {"error": "Unexpected pipeline output format"}
-            
-        else:
-            # Manual inference
-            inputs = self.tokenizer(
-                text, 
-                return_tensors="pt", 
-                truncation=InferenceConfig.TRUNCATION, 
-                max_length=InferenceConfig.INFERENCE_MAX_LENGTH
-            )
-            
-            if self.device == 0:
-                inputs = {k: v.cuda() for k, v in inputs.items()}
+        # tokenize input
+        inputs = self.tokenizer(
+            text, 
+            return_tensors="pt", 
+            truncation=InferenceConfig.TRUNCATION, 
+            max_length=InferenceConfig.INFERENCE_MAX_LENGTH
+        )
+        
+        if self.device == 0:
+            inputs = {k: v.cuda() for k, v in inputs.items()}
 
-            with torch.no_grad():
-                logits = self.model(**inputs).logits
+        # run inference
+        with torch.no_grad():
+            logits = self.model(**inputs).logits
 
-            probs_raw = torch.sigmoid(logits).cpu().numpy()[0]
-            probs = {self.id2label.get(str(i), f"LABEL_{i}"): round(float(score), 4) 
-                    for i, score in enumerate(probs_raw)}
+        # apply sigmoid for multi-label classification
+        probs_raw = torch.sigmoid(logits).cpu().numpy()[0]
+        probs = {self.id2label.get(str(i), f"LABEL_{i}"): round(float(score), 4) 
+                for i, score in enumerate(probs_raw)}
 
         sorted_probs = sorted(probs.items(), key=lambda x: x[1], reverse=True)
         top_label = sorted_probs[0][0] if sorted_probs else None
