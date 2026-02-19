@@ -239,6 +239,7 @@ hypercorn app:app --bind 0.0.0.0:8000
   "text": "The text to classify",
   "predictions": {
     "LABEL_1": 0.12,
+    "LABEL_2": 0.05,
     "LABEL_3": 0.9944
   },
   "positive_labels": ["LABEL_3"],
@@ -247,6 +248,8 @@ hypercorn app:app --bind 0.0.0.0:8000
 }
 
 ```
+
+> **Note:** The `predictions` field contains **all labels** from the model with their respective confidence scores, regardless of the threshold. The `positive_labels` field is a convenience filter showing only labels that meet the threshold criteria.
 
 ---
 
@@ -276,14 +279,14 @@ hypercorn app:app --bind 0.0.0.0:8000
   "results": [
     {
       "text": "First text to classify",
-      "predictions": { "LABEL_3": 0.9944, "LABEL_1": 0.05 },
+      "predictions": { "LABEL_1": 0.05, "LABEL_2": 0.02, "LABEL_3": 0.9944 },
       "positive_labels": ["LABEL_3"],
       "top_label": "LABEL_3",
       "max_score": 0.9944
     },
     {
       "text": "Second text to classify",
-      "predictions": { "LABEL_3": 0.85, "LABEL_1": 0.10 },
+      "predictions": { "LABEL_1": 0.10, "LABEL_2": 0.05, "LABEL_3": 0.85 },
       "positive_labels": [],
       "top_label": "LABEL_3",
       "max_score": 0.85
@@ -292,6 +295,8 @@ hypercorn app:app --bind 0.0.0.0:8000
 }
 
 ```
+
+> **Note:** The `predictions` field in each result contains **all labels** from the model with their respective confidence scores, regardless of the threshold. The `positive_labels` field is a convenience filter showing only labels that meet the threshold criteria.
 
 ## Licensing:
 
