@@ -3,6 +3,7 @@ from .labels import LabelConfig
 class ModelType:
     CLIP_VIT = "clip-vit"  # CLIP ViT-L-14 for vision-text
     DEBERTA = "deberta"    # DeBERTa V3 for text-only
+    MODERNBERT = "modernbert"  # ModernBERT for text-only
 
 class ModelConfig:
     
@@ -21,6 +22,12 @@ class ModelConfig:
     DEBERTA_MAX_TOKEN_LENGTH = 256
     DEBERTA_MAX_INFERENCING_TOKEN_LENGTH = 256  # allow longer inputs when inferencing? (experimental)
 
+    # ModernBERT configuration
+    MODERNBERT_MODEL_NAME = "answerdotai/ModernBERT-large" #modernbert large
+    MODERNBERT_MAX_TOKEN_LENGTH = 512 # to save memory
+    MODERNBERT_MAX_INFERENCING_TOKEN_LENGTH = 8192  # allow longer inputs for inferencing? (experimental)
+
+
     # epsilon for numerical stability
     EPSILON = 1e-6
 
@@ -36,12 +43,15 @@ class ModelConfig:
         elif cls.MODEL_TYPE == ModelType.DEBERTA:
             return cls.DEBERTA_MODEL_NAME
         
+        elif cls.MODEL_TYPE == ModelType.MODERNBERT:
+            return cls.MODERNBERT_MODEL_NAME
+        
         else:
             raise ValueError(f"Unknown model type: {cls.MODEL_TYPE}")
     
     # Static default for backwards compatibility with code that accesses BASE_MODEL_NAME directly
     # generally there is no need to modify this line, but its provided for ease of access
-    BASE_MODEL_NAME = CLIP_MODEL_NAME if MODEL_TYPE == ModelType.CLIP_VIT else DEBERTA_MODEL_NAME
+    BASE_MODEL_NAME = CLIP_MODEL_NAME if MODEL_TYPE == ModelType.CLIP_VIT else DEBERTA_MODEL_NAME if MODEL_TYPE == ModelType.DEBERTA else MODERNBERT_MODEL_NAME
     
     # number of output labels for multi-label classification
     # derived from active labels for this use case
@@ -49,6 +59,10 @@ class ModelConfig:
     
     # problem type for model
     PROBLEM_TYPE = "multi_label_classification"
+
+    # attention implementation for transformer model
+
+    ATTENTION_IMPLEMENTATION = "sdpa" if MODEL_TYPE == ModelType.MODERNBERT else "default"  # use standard attention for CLIP and DeBERTa, but switch to sdpa for ModernBERT which supports it for better efficiency on long inputs
     
     # max sequence length - depends on model type
     @classmethod
@@ -59,11 +73,14 @@ class ModelConfig:
         elif cls.MODEL_TYPE == ModelType.DEBERTA:
             return cls.DEBERTA_MAX_TOKEN_LENGTH
         
+        elif cls.MODEL_TYPE == ModelType.MODERNBERT:
+            return cls.MODERNBERT_MAX_TOKEN_LENGTH
+        
         else:
             return 256 # default fallback (should never be used if the model is properly configured)
 
     # max sequence length for inference
-    INFERENCE_MAX_LENGTH = CLIP_MAX_INFERENCING_TOKEN_LENGTH if MODEL_TYPE == ModelType.CLIP_VIT else DEBERTA_MAX_INFERENCING_TOKEN_LENGTH
+    INFERENCE_MAX_LENGTH = CLIP_MAX_INFERENCING_TOKEN_LENGTH if MODEL_TYPE == ModelType.CLIP_VIT else DEBERTA_MAX_INFERENCING_TOKEN_LENGTH if MODEL_TYPE == ModelType.DEBERTA else MODERNBERT_MAX_INFERENCING_TOKEN_LENGTH
 
 class InferenceConfig:
 

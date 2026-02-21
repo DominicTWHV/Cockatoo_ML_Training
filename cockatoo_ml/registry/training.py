@@ -30,20 +30,32 @@ class ModelTrainingConfig:
     DEBERTA_USE_BF16 = False  # older hardware, no modern api support
     DEBERTA_USE_TF32 = False
 
+    # --- ModernBERT hyperparams
+    MODERNBERT_NUM_EPOCHS = 3
+    MODERNBERT_BATCH_SIZE = 8  # ModernBERT is a very large
+    MODERNBERT_GRADIENT_ACCUMULATION_STEPS = 12
+    MODERNBERT_LEARNING_RATE = 1e-5
+    MODERNBERT_WEIGHT_DECAY = 0.01
+    MODERNBERT_WARMUP_RATIO = 0.1
+
+    MODERNBERT_USE_FP16 = True
+    MODERNBERT_USE_BF16 = False  # older hardware, no modern api
+    MODERNBERT_USE_TF32 = False
+
 class TrainingConfig:
     
     # training hyperparameters (derived from ModelTrainingConfig and ModelConfig)
-    NUM_EPOCHS = ModelTrainingConfig.CLIP_NUM_EPOCHS if ModelConfig.MODEL_TYPE == ModelType.CLIP_VIT else ModelTrainingConfig.DEBERTA_NUM_EPOCHS
-    BATCH_SIZE = ModelTrainingConfig.CLIP_BATCH_SIZE if ModelConfig.MODEL_TYPE == ModelType.CLIP_VIT else ModelTrainingConfig.DEBERTA_BATCH_SIZE
-    GRADIENT_ACCUMULATION_STEPS = ModelTrainingConfig.CLIP_GRADIENT_ACCUMULATION_STEPS if ModelConfig.MODEL_TYPE == ModelType.CLIP_VIT else ModelTrainingConfig.DEBERTA_GRADIENT_ACCUMULATION_STEPS
-    LEARNING_RATE = ModelTrainingConfig.CLIP_LEARNING_RATE if ModelConfig.MODEL_TYPE == ModelType.CLIP_VIT else ModelTrainingConfig.DEBERTA_LEARNING_RATE
-    WEIGHT_DECAY = ModelTrainingConfig.CLIP_WEIGHT_DECAY if ModelConfig.MODEL_TYPE == ModelType.CLIP_VIT else ModelTrainingConfig.DEBERTA_WEIGHT_DECAY
-    WARMUP_RATIO = ModelTrainingConfig.CLIP_WARMUP_RATIO if ModelConfig.MODEL_TYPE == ModelType.CLIP_VIT else ModelTrainingConfig.DEBERTA_WARMUP_RATIO
+    NUM_EPOCHS = ModelTrainingConfig.CLIP_NUM_EPOCHS if ModelConfig.MODEL_TYPE == ModelType.CLIP_VIT else ModelTrainingConfig.DEBERTA_NUM_EPOCHS if ModelConfig.MODEL_TYPE == ModelType.DEBERTA else ModelTrainingConfig.MODERNBERT_NUM_EPOCHS
+    BATCH_SIZE = ModelTrainingConfig.CLIP_BATCH_SIZE if ModelConfig.MODEL_TYPE == ModelType.CLIP_VIT else ModelTrainingConfig.DEBERTA_BATCH_SIZE if ModelConfig.MODEL_TYPE == ModelType.DEBERTA else ModelTrainingConfig.MODERNBERT_BATCH_SIZE
+    GRADIENT_ACCUMULATION_STEPS = ModelTrainingConfig.CLIP_GRADIENT_ACCUMULATION_STEPS if ModelConfig.MODEL_TYPE == ModelType.CLIP_VIT else ModelTrainingConfig.DEBERTA_GRADIENT_ACCUMULATION_STEPS if ModelConfig.MODEL_TYPE == ModelType.DEBERTA else ModelTrainingConfig.MODERNBERT_GRADIENT_ACCUMULATION_STEPS
+    LEARNING_RATE = ModelTrainingConfig.CLIP_LEARNING_RATE if ModelConfig.MODEL_TYPE == ModelType.CLIP_VIT else ModelTrainingConfig.DEBERTA_LEARNING_RATE if ModelConfig.MODEL_TYPE == ModelType.DEBERTA else ModelTrainingConfig.MODERNBERT_LEARNING_RATE
+    WEIGHT_DECAY = ModelTrainingConfig.CLIP_WEIGHT_DECAY if ModelConfig.MODEL_TYPE == ModelType.CLIP_VIT else ModelTrainingConfig.DEBERTA_WEIGHT_DECAY if ModelConfig.MODEL_TYPE == ModelType.DEBERTA else ModelTrainingConfig.MODERNBERT_WEIGHT_DECAY
+    WARMUP_RATIO = ModelTrainingConfig.CLIP_WARMUP_RATIO if ModelConfig.MODEL_TYPE == ModelType.CLIP_VIT else ModelTrainingConfig.DEBERTA_WARMUP_RATIO if ModelConfig.MODEL_TYPE == ModelType.DEBERTA else ModelTrainingConfig.MODERNBERT_WARMUP_RATIO
     
     # precision
-    USE_FP16 = ModelTrainingConfig.CLIP_USE_FP16 if ModelConfig.MODEL_TYPE == ModelType.CLIP_VIT else ModelTrainingConfig.DEBERTA_USE_FP16
-    USE_BF16 = ModelTrainingConfig.CLIP_USE_BF16 if ModelConfig.MODEL_TYPE == ModelType.CLIP_VIT else ModelTrainingConfig.DEBERTA_USE_BF16
-    USE_TF32 = ModelTrainingConfig.CLIP_USE_TF32 if ModelConfig.MODEL_TYPE == ModelType.CLIP_VIT else ModelTrainingConfig.DEBERTA_USE_TF32
+    USE_FP16 = ModelTrainingConfig.CLIP_USE_FP16 if ModelConfig.MODEL_TYPE == ModelType.CLIP_VIT else ModelTrainingConfig.DEBERTA_USE_FP16 if ModelConfig.MODEL_TYPE == ModelType.DEBERTA else ModelTrainingConfig.MODERNBERT_USE_FP16
+    USE_BF16 = ModelTrainingConfig.CLIP_USE_BF16 if ModelConfig.MODEL_TYPE == ModelType.CLIP_VIT else ModelTrainingConfig.DEBERTA_USE_BF16 if ModelConfig.MODEL_TYPE == ModelType.DEBERTA else ModelTrainingConfig.MODERNBERT_USE_BF16
+    USE_TF32 = ModelTrainingConfig.CLIP_USE_TF32 if ModelConfig.MODEL_TYPE == ModelType.CLIP_VIT else ModelTrainingConfig.DEBERTA_USE_TF32 if ModelConfig.MODEL_TYPE == ModelType.DEBERTA else ModelTrainingConfig.MODERNBERT_USE_TF32
     
     # eval and logging
     EVAL_STRATEGY = 'epoch'
