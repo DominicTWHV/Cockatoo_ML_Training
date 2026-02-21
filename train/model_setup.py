@@ -144,6 +144,7 @@ def load_model(model_name=None, num_labels=None, model_type=None):
             torch_dtype=torch.float32,
             label2id=label2id,
             id2label=id2label,
+            attn_implementation=ModelConfig.ATTENTION_IMPLEMENTATION
         )
         logger.info(f"Loaded DeBERTa model with {num_labels} labels")
         
