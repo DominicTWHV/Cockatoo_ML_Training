@@ -49,6 +49,7 @@ def get_training_args(
         load_best_model_at_end=TrainingConfig.LOAD_BEST_MODEL_AT_END,
         metric_for_best_model=TrainingConfig.METRIC_FOR_BEST_MODEL,
         greater_is_better=TrainingConfig.GREATER_IS_BETTER,
+        gradient_checkpointing=TrainingConfig.GRADIENT_CHECKPOINTING,
         fp16=use_fp16,
         bf16=TrainingConfig.USE_BF16,
         tf32=TrainingConfig.USE_TF32,
