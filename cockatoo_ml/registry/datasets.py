@@ -56,9 +56,6 @@ class DatasetColumns:
     # std column names
     TEXT_COL = 'text'
     LABELS_COL = 'labels'
-    LABEL_COL = 'label'
-    TOXICITY_COL = 'toxicity'
-    HATE_SPEECH_SCORE_COL = 'hate_speech_score'
 
 
 class RebalancingPolicy:

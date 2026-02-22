@@ -101,9 +101,6 @@ class MetricsConfig:
     # per-label thresholds override this value, and can be configured in cockatoo_ml/registry/column_mapping.py DatasetColumnMapping.LABEL_THRESHOLDS
     PREDICTION_THRESHOLD = 0.5
     
-    # averaging strategy for multi-label metrics
-    AVERAGE_STRATEGY = 'macro'
-
     # exclude labels with zero support from macro averaging
     INCLUDE_EMPTY_LABELS = False
     

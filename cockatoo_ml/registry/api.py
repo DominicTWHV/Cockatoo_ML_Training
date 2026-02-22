@@ -12,11 +12,7 @@ class APIConfig:
     
     # default prediction threshold (when not provided in request)
     DEFAULT_THRESHOLD = 0.5
-    
-    # threshold constraints (do not change unless you know what you're doing)
-    MIN_THRESHOLD = 0.0
-    MAX_THRESHOLD = 1.0
-    
+
     # text length validation
     # prevents empty text inputs which can cause issues
     MIN_TEXT_LENGTH = 1

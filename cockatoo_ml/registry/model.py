@@ -49,10 +49,6 @@ class ModelConfig:
         else:
             raise ValueError(f"Unknown model type: {cls.MODEL_TYPE}")
     
-    # Static default for backwards compatibility with code that accesses BASE_MODEL_NAME directly
-    # generally there is no need to modify this line, but its provided for ease of access
-    BASE_MODEL_NAME = CLIP_MODEL_NAME if MODEL_TYPE == ModelType.CLIP_VIT else DEBERTA_MODEL_NAME if MODEL_TYPE == ModelType.DEBERTA else MODERNBERT_MODEL_NAME
-    
     # number of output labels for multi-label classification
     # derived from active labels for this use case
     NUM_LABELS = len(LabelConfig.ACTIVE_LABELS)
@@ -86,10 +82,7 @@ class InferenceConfig:
 
     # default model path for inference
     DEFAULT_MODEL_PATH = "constellation_one_text"
-    
-    # batch size for inference pipeline
-    BATCH_SIZE = 8
-    
+
     # truncation setting
     TRUNCATION = True
 
