@@ -163,3 +163,7 @@ def load_model(model_name=None, num_labels=None, model_type=None):
         )
         logger.info(f"Loaded ModernBERT model with {num_labels} labels")
 
+    else:
+        raise ValueError(f"Unknown model type: {model_type}")
+
+    return model
