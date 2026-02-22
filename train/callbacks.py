@@ -1,4 +1,5 @@
 import requests
+import json
 
 from datetime import datetime, timezone
 
@@ -39,11 +40,13 @@ class LiveMetricsWebhookCallback(TrainerCallback):
         try:
             # dispatch metrics to api server
 
-            logger.info(f"Posting data to {endpoint_url}: {payload}")
+            json_payload = json.dumps(payload, default=str)
+
+            logger.info(f"Posting data to {endpoint_url}: {json_payload}")
             
             r = requests.post(
                 endpoint_url, 
-                json=payload, 
+                data=json_payload,
                 headers=self.headers, 
                 timeout=CallbackConfig.WEBHOOK_TIMEOUT
             )
@@ -75,11 +78,14 @@ class LiveMetricsWebhookCallback(TrainerCallback):
             return # only send metrics if validation telemetry is enabled and endpoint is valid
         
         if metrics:
+
+            json_payload = json.dumps(metrics, default=str)
+
             payload = {
                 "experiment_id": self.experiment_id,
                 "global_step": state.global_step,
                 "epoch": state.epoch,
-                "metrics": metrics,
+                "metrics": json_payload,
                 "timestamp": str(datetime.now(timezone.utc).replace(tzinfo=None)),
                 "is_eval": True
             }
