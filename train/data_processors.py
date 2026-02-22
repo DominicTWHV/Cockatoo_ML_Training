@@ -1,4 +1,5 @@
 import pandas as pd
+import numpy as np
 
 from datasets import Dataset, DatasetDict
 
@@ -70,11 +71,24 @@ def combine_datasets(datasets):
     # sample the number of entries before actually removing duplicates for logging later on
     pre_dedupe_count = len(combined_df)
 
-    # Create a helper column of sorted tuples to handle label order variations
-    # ie: ["Action", "Comedy"] becomes ("Action", "Comedy") and ["Comedy", "Action"] also becomes ("Action", "Comedy") | (agnostic to order + tuple conversion for hashability)
-    combined_df["_temp_labels_tuple"] = combined_df[DatasetColumns.LABELS_COL].apply(
-        lambda x: tuple(sorted(x)) if isinstance(x, (list, set, tuple)) else (x,)
-    )
+    num_active_labels = len(LabelConfig.ACTIVE_LABELS)
+
+    def _coerce_label_vector(values):
+        if isinstance(values, (list, tuple)):
+            vector = list(values)
+        else:
+            vector = [values]
+
+        if len(vector) < num_active_labels:
+            vector = vector + [0] * (num_active_labels - len(vector))
+            
+        elif len(vector) > num_active_labels:
+            vector = vector[:num_active_labels]
+
+        return [int(v) for v in vector]
+
+    combined_df[DatasetColumns.LABELS_COL] = combined_df[DatasetColumns.LABELS_COL].apply(_coerce_label_vector)
+    combined_df["_temp_labels_tuple"] = combined_df[DatasetColumns.LABELS_COL].apply(tuple)
 
     policy = DataDedupConfig.SAME_TEXT_DIFFERENT_LABELS
     logger.info(f"Deduplication policy for same text/different labels: {policy}")
@@ -99,7 +113,8 @@ def combine_datasets(datasets):
         # merge labels into a single row per text
         merged_rows = []
         for _, group in combined_df.groupby("_temp_text_norm", sort=False):
-            merged_labels = sorted({label for labels in group["_temp_labels_tuple"] for label in labels})
+            label_vectors = np.asarray(group["_temp_labels_tuple"].tolist(), dtype=np.int8)
+            merged_labels = label_vectors.max(axis=0).astype(int).tolist()
             row = group.iloc[0].copy()
             row[DatasetColumns.LABELS_COL] = merged_labels
             merged_rows.append(row)
