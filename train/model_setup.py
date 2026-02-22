@@ -131,6 +131,32 @@ def load_model(model_name=None, num_labels=None, model_type=None):
     
     logger.info(f"Loading model type: {model_type}")
     logger.info(f"Model name: {model_name}")
+
+    def _load_transformer_model():
+        # prefer torch_dtype for broad transformers compatibility.
+        # keep a fallback to dtype for forward-compat with newer APIs if needed.
+        model_kwargs = {
+            'num_labels': num_labels,
+            'problem_type': ModelConfig.PROBLEM_TYPE,
+            'label2id': label2id,
+            'id2label': id2label,
+            'attn_implementation': ModelConfig.ATTENTION_IMPLEMENTATION,
+            'torch_dtype': model_dtype,
+        }
+
+        try:
+            return AutoModelForSequenceClassification.from_pretrained(
+                model_name,
+                **model_kwargs,
+            )
+        except TypeError:
+            # fallback path for potential API changes where torch_dtype is renamed
+            model_kwargs.pop('torch_dtype', None)
+            model_kwargs['dtype'] = model_dtype
+            return AutoModelForSequenceClassification.from_pretrained(
+                model_name,
+                **model_kwargs,
+            )
     
     if model_type == ModelType.CLIP_VIT:
         # load clip classifier
@@ -141,31 +167,26 @@ def load_model(model_name=None, num_labels=None, model_type=None):
         
     elif model_type == ModelType.DEBERTA:
         # load deberta classifier
-        model = AutoModelForSequenceClassification.from_pretrained(
-            model_name,
-            num_labels=num_labels,
-            problem_type=ModelConfig.PROBLEM_TYPE,
-            dtype=model_dtype,
-            label2id=label2id,
-            id2label=id2label,
-            attn_implementation=ModelConfig.ATTENTION_IMPLEMENTATION
-        )
+        model = _load_transformer_model()
         logger.info(f"Loaded DeBERTa model with {num_labels} labels")
 
     elif model_type == ModelType.MODERNBERT:
         # load modernbert classifier (uses sdpa attention via ATTENTION_IMPLEMENTATION)
-        model = AutoModelForSequenceClassification.from_pretrained(
-            model_name,
-            num_labels=num_labels,
-            problem_type=ModelConfig.PROBLEM_TYPE,
-            dtype=model_dtype,
-            label2id=label2id,
-            id2label=id2label,
-            attn_implementation=ModelConfig.ATTENTION_IMPLEMENTATION
-        )
+        model = _load_transformer_model()
         logger.info(f"Loaded ModernBERT model with {num_labels} labels")
 
     else:
         raise ValueError(f"Unknown model type: {model_type}")
+
+    total_params = sum(p.numel() for p in model.parameters())
+    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    trainable_pct = (100.0 * trainable_params / total_params) if total_params > 0 else 0.0
+    logger.info(
+        f"Model parameters: total={total_params:,}, trainable={trainable_params:,} ({trainable_pct:.2f}%)"
+    )
+    if trainable_pct < 90.0:
+        logger.warning(
+            f"Only {trainable_pct:.2f}% of parameters are trainable. This may cause unusually low VRAM usage and weak fine-tuning."
+        )
 
     return model

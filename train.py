@@ -1,5 +1,6 @@
 import argparse
 import json
+import torch
 
 from pathlib import Path
 
@@ -102,6 +103,24 @@ def main():
     
     # tokenize here
     tokenized_dataset = tokenize_dataset(dataset, tokenizer)
+
+    # basic token-length diagnostics to catch silent under-utilization
+    try:
+        train_sample_size = min(512, len(tokenized_dataset['train']))
+        train_sample = tokenized_dataset['train'].select(range(train_sample_size))
+        lengths = train_sample['attention_mask'].sum(dim=1).tolist()
+        if lengths:
+            avg_len = sum(lengths) / len(lengths)
+            max_seen = max(lengths)
+            logger.info(
+                f"Token length stats (train sample n={len(lengths)}): avg_nonpad={avg_len:.1f}, max_nonpad={max_seen}, configured_max={ModelConfig.get_max_token_length()}"
+            )
+            if avg_len < 64:
+                logger.warning(
+                    "Average non-padding token length is very low. VRAM usage may stay low even with larger batch sizes."
+                )
+    except Exception as e:
+        logger.warning(f"Failed to compute token-length diagnostics: {e}")
     
     # load model base for tuning or the saved fine-tuned model for eval-only
     if args.eval_only:
@@ -124,6 +143,17 @@ def main():
     
     # get training args
     training_args = get_training_args()
+    logger.info(
+        f"Training setup: model_type={ModelConfig.MODEL_TYPE}, batch_size={training_args.per_device_train_batch_size}, grad_accum={training_args.gradient_accumulation_steps}, fp16={training_args.fp16}, bf16={training_args.bf16}, grad_ckpt={training_args.gradient_checkpointing}"
+    )
+
+    cuda_available = torch.cuda.is_available()
+    logger.info(f"CUDA available: {cuda_available}")
+    if cuda_available:
+        logger.info(f"CUDA device count: {torch.cuda.device_count()}")
+        logger.info(f"CUDA device[0]: {torch.cuda.get_device_name(0)}")
+    else:
+        logger.warning("CUDA not available. Training will run on CPU, which can explain low GPU VRAM usage.")
     
     # determine which threshold to use (LABEL_THRESHOLDS for eval-only mode)
     eval_thresholds = DatasetColumnMapping.LABEL_THRESHOLDS if args.eval_only else None
@@ -139,6 +169,7 @@ def main():
         pos_weight=pos_weight,
         eval_thresholds=eval_thresholds
     )
+    logger.info(f"Trainer device: {trainer.args.device} | n_gpu={trainer.args.n_gpu}")
     
     # hook to metrics server for posting metrics
     if WebhookConfig.enable or WebhookConfig.enable_validation:  # only add callback if at least one is enabled
