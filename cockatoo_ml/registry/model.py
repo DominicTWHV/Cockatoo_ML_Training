@@ -7,8 +7,8 @@ class ModelType:
 
 class ModelConfig:
     
-    # model type selection (choose between CLIP_VIT and DEBERTA)
-    MODEL_TYPE = ModelType.CLIP_VIT
+    # model type selection (choose between CLIP_VIT, DEBERTA, MODERNBERT)
+    MODEL_TYPE = ModelType.DEBERTA
     
     # CLIP ViT-L-14 configuration
     CLIP_MODEL_NAME = "openai/clip-vit-large-patch14"
