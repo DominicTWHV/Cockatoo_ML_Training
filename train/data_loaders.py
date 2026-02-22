@@ -131,6 +131,38 @@ def load_tweet_hate_dataset(base_dir=None):
     return None, None
 
 
+def load_tweet_emotion_dataset(base_dir=None):
+    if base_dir is None:
+        base_dir = PathConfig.BASE_DATA_DIR
+
+    tweet_emotion_path = os.path.join(base_dir, DatasetPaths.TWEET_EVAL_DIR, DatasetPaths.TWEET_EVAL_EMOTION_SUBDIR, DatasetPaths.TWEET_EVAL_FILE)
+    if os.path.exists(tweet_emotion_path):
+        df_emotion = pd.read_parquet(tweet_emotion_path)
+        logger.info(f"Tweet emotion raw columns: {df_emotion.columns.tolist()}")
+
+        # emotion config uses a multiclass label: 0=anger, 1=joy, 2=optimism, 3=sadness
+        # convert to boolean: 1 if anger (label==0), 0 otherwise
+        if 'label' in df_emotion.columns:
+            df_emotion['anger'] = (df_emotion['label'] == 0).astype(int)
+            
+        else:
+            logger.warning("Tweet emotion: 'label' column not found, skipping")
+            return None, None
+
+        mapping = DatasetColumnMapping.get_mapping('tweet_emotion')
+        df_emotion = extract_labels_from_df(df_emotion, mapping, 'tweet_emotion')
+
+        if df_emotion is not None:
+            df_emotion = df_emotion.dropna(subset=[DatasetColumns.TEXT_COL])
+            logger.info(f"Tweet emotion loaded: {len(df_emotion)} samples")
+            return df_emotion, 'tweet_emotion'
+
+    else:
+        logger.warning("Tweet emotion parquet not found")
+
+    return None, None
+
+
 def load_toxicchat_dataset(base_dir=None):
     if base_dir is None:
         base_dir = PathConfig.BASE_DATA_DIR
@@ -186,6 +218,7 @@ def load_all_datasets(base_dir=None):
         load_phishing_dataset,
         load_hate_speech_dataset,
         load_tweet_hate_dataset,
+        load_tweet_emotion_dataset,
         load_toxicchat_dataset,
         load_jigsaw_dataset,
     ]
