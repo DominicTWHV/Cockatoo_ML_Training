@@ -135,6 +135,15 @@ class MetricsConfig:
     # set to 'warn' to raise warnings and return 0 for precision/recall when this occurs
     ZERO_DIVISION = 0
 
+    # after training, sweep thresholds on the validation set and find the per-label threshold
+    # that maximises binary F1; results are logged but do NOT override LABEL_THRESHOLDS automatically
+    # recommended to leave on. After the values are calculated, it's recommended to apply these into the LABEL_THRESHOLDS (cockatoo_ml/registry/column_mapping.py) for inference.
+    FIND_BEST_THRESHOLDS = True
+
+    # number of candidate thresholds to evaluate in the range (0, 1) exclusive
+    # higher values give finer resolution at the cost of slightly more compute
+    THRESHOLD_SEARCH_STEPS = 100
+
 
 class CallbackConfig: 
     #these are used in conjunction with cockatoo_ml/registry/api.py WebhookConfig for reporting training telemetry to external services
