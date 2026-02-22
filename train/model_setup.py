@@ -3,6 +3,8 @@ import torch.nn as nn
 
 from transformers import AutoModelForSequenceClassification, CLIPModel
 
+from train.losses import BCEWithLogitsLoss
+
 from cockatoo_ml.registry import ModelConfig, LabelConfig, ModelType, DataSplitConfig
 from cockatoo_ml.logger.context import model_training_logger as logger
 
@@ -60,7 +62,7 @@ class CLIPClassifier(nn.Module):
         loss = None
         if labels is not None:
             # multi label BCE loss
-            loss_fct = nn.BCEWithLogitsLoss()
+            loss_fct = BCEWithLogitsLoss()
             loss = loss_fct(logits, labels.float())
         
         # return in format expected by trainer
