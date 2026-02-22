@@ -17,6 +17,8 @@ class ModelTrainingConfig:
     CLIP_USE_BF16 = False  # older hardware, no modern api support
     CLIP_USE_TF32 = False
     CLIP_GRADIENT_CHECKPOINTING = False
+    CLIP_USE_LLRD = False  # LLRD not well-suited to CLIP's custom dual-encoder head architecture
+    CLIP_LLRD_DECAY_FACTOR = 0.9
 
     # --- DeBERTa hyperparams
 
@@ -31,6 +33,8 @@ class ModelTrainingConfig:
     DEBERTA_USE_BF16 = False  # older hardware, no modern api support
     DEBERTA_USE_TF32 = False
     DEBERTA_GRADIENT_CHECKPOINTING = False
+    DEBERTA_USE_LLRD = False
+    DEBERTA_LLRD_DECAY_FACTOR = 0.9
 
     # --- ModernBERT hyperparams
     MODERNBERT_NUM_EPOCHS = 3
@@ -44,6 +48,8 @@ class ModelTrainingConfig:
     MODERNBERT_USE_BF16 = False  # older hardware, no modern api
     MODERNBERT_USE_TF32 = False
     MODERNBERT_GRADIENT_CHECKPOINTING = True  # reduces VRAM at the cost of ~20% slower training (recommended to leave on for modernbert)
+    MODERNBERT_USE_LLRD = True
+    MODERNBERT_LLRD_DECAY_FACTOR = 0.9
 
 class TrainingConfig:
     
@@ -87,6 +93,13 @@ class TrainingConfig:
     OPTIMIZER_BETAS = (0.9, 0.999)
     OPTIMIZER_EPS = 1e-8
     OPTIMIZER_MOMENTUM = 0.9
+
+    # layer-wise learning rate decay (LLRD)
+    # assign progressively lower LRs to earlier transformer layers; enabled per model in ModelTrainingConfig
+    # decay_factor controls the steepness: head gets full LEARNING_RATE, each layer deeper multiplies by decay_factor
+    # 0.9 = mild decay, 0.8 = moderate, 0.65 = aggressive
+    USE_LLRD = ModelTrainingConfig.CLIP_USE_LLRD if ModelConfig.MODEL_TYPE == ModelType.CLIP_VIT else ModelTrainingConfig.DEBERTA_USE_LLRD if ModelConfig.MODEL_TYPE == ModelType.DEBERTA else ModelTrainingConfig.MODERNBERT_USE_LLRD
+    LLRD_DECAY_FACTOR = ModelTrainingConfig.CLIP_LLRD_DECAY_FACTOR if ModelConfig.MODEL_TYPE == ModelType.CLIP_VIT else ModelTrainingConfig.DEBERTA_LLRD_DECAY_FACTOR if ModelConfig.MODEL_TYPE == ModelType.DEBERTA else ModelTrainingConfig.MODERNBERT_LLRD_DECAY_FACTOR
 
     # loss function configuration
     # supported values:
