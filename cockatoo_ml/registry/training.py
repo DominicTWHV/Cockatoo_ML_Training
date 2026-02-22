@@ -76,6 +76,8 @@ class TrainingConfig:
     METRIC_FOR_BEST_MODEL = 'f1'
     GREATER_IS_BETTER = True
     LOGGING_STEPS = 12
+    EVAL_STEPS = 121 if EVAL_STRATEGY == 'steps' else None
+    SAVE_STEPS = 121 if SAVE_STRATEGY == 'steps' else None
     
     # dataloader settings
     DATALOADER_NUM_WORKERS = 4
