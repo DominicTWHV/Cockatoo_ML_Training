@@ -75,6 +75,26 @@ class TrainingConfig:
     # reporting
     REPORT_TO = 'tensorboard'
 
+    # optimizer configuration
+    # supported values: 'adamw_8bit', 'adamw', 'adam', 'sgd'
+    OPTIMIZER = 'adamw_8bit'
+    OPTIMIZER_BETAS = (0.9, 0.999)
+    OPTIMIZER_EPS = 1e-8
+    OPTIMIZER_MOMENTUM = 0.9
+
+    # loss function configuration
+    # supported values:
+    #   'bce': BCEWithLogitsLoss (standard binary cross-entropy with logits)
+    #   'asl': Asymmetric Loss (Ben-Baruch et al., 2021; recommended for multi-label tasks with heavy positive/negative imbalance)
+    LOSS_FUNCTION = 'asl'
+
+    # asymmetric loss hyper-parameters (only applied when LOSS_FUNCTION='asl')
+    # gamma_neg > gamma_pos is the standard recommendation; higher gamma_neg
+    # suppresses easy-negative gradients more aggressively.
+    ASL_GAMMA_NEG = 4      # focusing exponent for negative samples (recommended: 4)
+    ASL_GAMMA_POS = 1      # focusing exponent for positive samples (recommended: 0–1)
+    ASL_CLIP = 0.05        # probability margin for negative shifting (recommended: 0.05)
+
 
 class MetricsConfig: 
     # threshold for binary classification (used if no per-label thresholds provided for evaluation)
