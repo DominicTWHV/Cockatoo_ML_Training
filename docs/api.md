@@ -93,3 +93,9 @@
 ```
 
 > **Note:** The `predictions` field in each result contains **all labels** from the model with their respective confidence scores, regardless of the threshold. The `positive_labels` field is a convenience filter showing only labels that meet the threshold criteria.
+
+## Notes:
+
+In addition to direct API calls, we also provide a simple [TUI Client](https://github.com/DominicTWHV/Cockatoo_Model_Interface) that can be used to quickly interface with the inference endpoints for quick tests.
+
+For more info, see the `README.md` file within the repo of the Model Interface client.

@@ -44,7 +44,7 @@ When `MODEL_TYPE` is changed, the following values resolve automatically from `M
 | `ModelConfig.INFERENCE_MAX_LENGTH` | `cockatoo_ml/registry/model.py` |
 | `ModelConfig.get_base_model_name()` | `cockatoo_ml/registry/model.py` |
 | `ModelConfig.get_max_token_length()` | `cockatoo_ml/registry/model.py` |
-| `ModelConfig.GRADIENT_CHECKPOINTING` | `cockatoo_ml/registry/model.py` | 
+| `TrainingConfig.GRADIENT_CHECKPOINTING` | `cockatoo_ml/registry/training.py` |
 | `TrainingConfig.USE_LLRD` | `cockatoo_ml/registry/training.py` |
 | `TrainingConfig.LLRD_DECAY_FACTOR` | `cockatoo_ml/registry/training.py` |
 
@@ -70,10 +70,11 @@ MODEL_TYPE = ModelType.MODERNBERT
 | `WARMUP_RATIO` | `0.1` | `ModelTrainingConfig.MODERNBERT_WARMUP_RATIO` |
 | `NUM_EPOCHS` | `3` | `ModelTrainingConfig.MODERNBERT_NUM_EPOCHS` |
 | `USE_FP16` | `True` | `ModelTrainingConfig.MODERNBERT_USE_FP16` |
+| `GRADIENT_CHECKPOINTING` | `True` | `ModelTrainingConfig.MODERNBERT_GRADIENT_CHECKPOINTING` |
 | `ATTENTION_IMPLEMENTATION` | `sdpa` | auto-derived in `ModelConfig` |
 | Max token length (train) | `512` | `ModelConfig.MODERNBERT_MAX_TOKEN_LENGTH` |
 | Max token length (inference) | `8192` | `ModelConfig.MODERNBERT_MAX_INFERENCING_TOKEN_LENGTH` |
-| `USE_LLRD` | `False` | `ModelTrainingConfig.MODERNBERT_USE_LLRD` |
+| `USE_LLRD` | `True` | `ModelTrainingConfig.MODERNBERT_USE_LLRD` |
 | `LLRD_DECAY_FACTOR` | `0.9` | `ModelTrainingConfig.MODERNBERT_LLRD_DECAY_FACTOR` |
 | `OPTIMIZER` | `adamw_8bit` | `TrainingConfig.OPTIMIZER` (shared) |
 | `LOSS_FUNCTION` | `asl` | `TrainingConfig.LOSS_FUNCTION` (shared) |
@@ -83,6 +84,8 @@ MODEL_TYPE = ModelType.MODERNBERT
 - The low batch size (8) is intentional — ModernBERT-large is memory-intensive. Gradient accumulation is set high to compensate and maintain an effective batch of 96.
 - Training token length is capped at 512 to save memory. Inference can use up to 8192 tokens.
 - The `adamw_8bit` optimizer is strongly recommended for large models to reduce VRAM use during optimiser state storage.
+- Gradient checkpointing is enabled by default (`GRADIENT_CHECKPOINTING = True`). This recomputes activations during the backward pass instead of storing them, reducing peak VRAM at the cost of ~20% slower training. Recommended to leave on for ModernBERT-large.
+- LLRD is enabled by default (`USE_LLRD = True`). This assigns progressively lower learning rates to earlier transformer layers. Basically, the lower layers move less, preserving the pretrained values while moving the top layers to adapt to the new task. The `LLRD_DECAY_FACTOR` of 0.9 means each layer receives 90% of the LR of the layer above it. Adjust this for more or less aggressive decay (e.g. 0.85 or 0.8).
 
 ---
 
@@ -104,6 +107,7 @@ MODEL_TYPE = ModelType.CLIP_VIT
 | `WARMUP_RATIO` | `0.1` | `ModelTrainingConfig.CLIP_WARMUP_RATIO` |
 | `NUM_EPOCHS` | `3` | `ModelTrainingConfig.CLIP_NUM_EPOCHS` |
 | `USE_FP16` | `True` | `ModelTrainingConfig.CLIP_USE_FP16` |
+| `GRADIENT_CHECKPOINTING` | `False` | `ModelTrainingConfig.CLIP_GRADIENT_CHECKPOINTING` |
 | `ATTENTION_IMPLEMENTATION` | `default` | auto-derived in `ModelConfig` |
 | Max token length (train) | `77` | `ModelConfig.CLIP_MAX_TOKEN_LENGTH` |
 | Max token length (inference) | `77` | `ModelConfig.CLIP_MAX_INFERENCING_TOKEN_LENGTH` |
@@ -139,6 +143,7 @@ MODEL_TYPE = ModelType.DEBERTA
 | `WARMUP_RATIO` | `0.1` | `ModelTrainingConfig.DEBERTA_WARMUP_RATIO` |
 | `NUM_EPOCHS` | `3` | `ModelTrainingConfig.DEBERTA_NUM_EPOCHS` |
 | `USE_FP16` | `True` | `ModelTrainingConfig.DEBERTA_USE_FP16` |
+| `GRADIENT_CHECKPOINTING` | `False` | `ModelTrainingConfig.DEBERTA_GRADIENT_CHECKPOINTING` |
 | `ATTENTION_IMPLEMENTATION` | `default` | auto-derived in `ModelConfig` |
 | Max token length (train) | `256` | `ModelConfig.DEBERTA_MAX_TOKEN_LENGTH` |
 | Max token length (inference) | `256` | `ModelConfig.DEBERTA_MAX_INFERENCING_TOKEN_LENGTH` |

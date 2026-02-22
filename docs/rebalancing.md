@@ -139,7 +139,6 @@ class DataSplitConfig:
 ```python
 class DataSplitConfig:
     REBALANCING_POLICY = RebalancingPolicy.OVERSAMPLING
-    REBALANCE_TRAINING_DATA = True
 ```
 
 **When to use:**
