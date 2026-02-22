@@ -26,6 +26,7 @@ class ModelConfig:
     MODERNBERT_MODEL_NAME = "answerdotai/ModernBERT-large" #modernbert large
     MODERNBERT_MAX_TOKEN_LENGTH = 512 # to save memory
     MODERNBERT_MAX_INFERENCING_TOKEN_LENGTH = 8192  # allow longer inputs for inferencing? (experimental)
+    MODERNBERT_ATTENTION_IMPLEMENTATION = "sdpa"  # can use sdpa or flash_attention_2
 
 
     # epsilon for numerical stability
@@ -58,7 +59,7 @@ class ModelConfig:
 
     # attention implementation for transformer model
 
-    ATTENTION_IMPLEMENTATION = "sdpa" if MODEL_TYPE == ModelType.MODERNBERT else "default"  # use standard attention for CLIP and DeBERTa, but switch to sdpa for ModernBERT which supports it for better efficiency on long inputs
+    ATTENTION_IMPLEMENTATION = MODERNBERT_ATTENTION_IMPLEMENTATION if MODEL_TYPE == ModelType.MODERNBERT else "default"  # use standard attention for CLIP and DeBERTa, but switch to sdpa for ModernBERT which supports it for better efficiency on long inputs
     
     # max sequence length - depends on model type
     @classmethod
