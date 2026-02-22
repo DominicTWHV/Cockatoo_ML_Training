@@ -132,7 +132,34 @@ def load_model(model_name=None, num_labels=None, model_type=None):
     logger.info(f"Loading model type: {model_type}")
     logger.info(f"Model name: {model_name}")
 
+    def _is_flash_attention_error(exc: Exception) -> bool:
+        text = str(exc).lower()
+        flash_markers = (
+            "flash attention 2 only supports",
+            "flash_attn",
+            "flash_attn_2_cuda",
+            "undefined symbol",
+            "attn_implementation",
+        )
+        return any(marker in text for marker in flash_markers)
+
     def _load_transformer_model():
+        attn_implementation = ModelConfig.ATTENTION_IMPLEMENTATION
+        effective_dtype = model_dtype
+
+        if attn_implementation == 'flash_attention_2' and not torch.cuda.is_available():
+            logger.warning("flash_attention_2 requested but CUDA is unavailable; falling back to sdpa.")
+            attn_implementation = 'sdpa'
+
+        if attn_implementation == 'flash_attention_2' and model_dtype == 'auto':
+            if torch.cuda.is_available() and torch.cuda.is_bf16_supported():
+                effective_dtype = torch.bfloat16
+            else:
+                effective_dtype = torch.float16
+            logger.info(
+                f"Resolved dtype='auto' to {effective_dtype} for flash_attention_2 compatibility."
+            )
+
         # prefer torch_dtype for broad transformers compatibility.
         # keep a fallback to dtype for forward-compat with newer APIs if needed.
         model_kwargs = {
@@ -140,8 +167,8 @@ def load_model(model_name=None, num_labels=None, model_type=None):
             'problem_type': ModelConfig.PROBLEM_TYPE,
             'label2id': label2id,
             'id2label': id2label,
-            'attn_implementation': ModelConfig.ATTENTION_IMPLEMENTATION,
-            'torch_dtype': model_dtype,
+            'attn_implementation': attn_implementation,
+            'torch_dtype': effective_dtype,
         }
 
         try:
@@ -152,11 +179,24 @@ def load_model(model_name=None, num_labels=None, model_type=None):
         except TypeError:
             # fallback path for potential API changes where torch_dtype is renamed
             model_kwargs.pop('torch_dtype', None)
-            model_kwargs['dtype'] = model_dtype
+            model_kwargs['dtype'] = effective_dtype
             return AutoModelForSequenceClassification.from_pretrained(
                 model_name,
                 **model_kwargs,
             )
+        
+        except (ImportError, OSError, RuntimeError, ValueError) as exc:
+            if attn_implementation == 'flash_attention_2' and _is_flash_attention_error(exc):
+                logger.warning(f"flash_attention_2 failed ({exc}); retrying with sdpa attention.")
+
+                fallback_kwargs = dict(model_kwargs)
+                fallback_kwargs['attn_implementation'] = 'sdpa'
+                return AutoModelForSequenceClassification.from_pretrained(
+                    model_name,
+                    **fallback_kwargs,
+                )
+            
+            raise
     
     if model_type == ModelType.CLIP_VIT:
         # load clip classifier

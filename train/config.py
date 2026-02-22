@@ -56,6 +56,9 @@ def get_training_args(
         report_to=TrainingConfig.REPORT_TO,
         logging_dir=logging_dir,
         logging_steps=TrainingConfig.LOGGING_STEPS,
+        eval_steps=TrainingConfig.EVAL_STEPS,
+        save_steps=TrainingConfig.SAVE_STEPS,
+        max_grad_norm=TrainingConfig.MAX_GRAD_NORM if TrainingConfig.USE_GRADIENT_CLIPPING else 0.0,
         dataloader_num_workers=TrainingConfig.DATALOADER_NUM_WORKERS,
         save_total_limit=TrainingConfig.SAVE_TOTAL_LIMIT,
     )
