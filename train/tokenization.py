@@ -12,6 +12,7 @@ def get_tokenizer(model_name=None, model_type=None):
     # load tokenizer or processor based on ModelConfig.MODEL_TYPE
     # For CLIP: returns CLIPProcessor
     # For DeBERTa: returns AutoTokenizer
+    # For ModernBERT: returns AutoTokenizer
 
     if model_type is None:
         model_type = ModelConfig.MODEL_TYPE
@@ -26,7 +27,11 @@ def get_tokenizer(model_name=None, model_type=None):
     elif model_type == ModelType.DEBERTA:
         logger.info(f"Loading tokenizer for {model_name}")
         return AutoTokenizer.from_pretrained(model_name)
-    
+
+    elif model_type == ModelType.MODERNBERT:
+        logger.info(f"Loading tokenizer for {model_name}")
+        return AutoTokenizer.from_pretrained(model_name)
+
     else:
         raise ValueError(f"Unknown model type: {model_type}")
 
@@ -35,6 +40,7 @@ def create_preprocess_function(tokenizer, max_length=None, model_type=None):
     # create preprocessing function based on model type.
     # CLIP: processes both text and optional images
     # DeBERTa: processes text only
+    # ModernBERT: processes text only
 
     if model_type is None:
         model_type = ModelConfig.MODEL_TYPE
@@ -96,7 +102,21 @@ def create_preprocess_function(tokenizer, max_length=None, model_type=None):
             return tokenized
         
         return preprocess_deberta
+
+    elif model_type == ModelType.MODERNBERT:
+        # ModernBERT preprocessing (text only)
+        def preprocess_modernbert(examples):
+            tokenized = tokenizer(
+                examples['text'],
+                truncation=True,
+                padding='max_length',
+                max_length=max_length
+            )
+            tokenized['labels'] = torch.tensor(examples['labels'], dtype=torch.float)
+            return tokenized
         
+        return preprocess_modernbert
+
     else:
         raise ValueError(f"Unknown model type: {model_type}")
 

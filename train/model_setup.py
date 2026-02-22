@@ -149,8 +149,17 @@ def load_model(model_name=None, num_labels=None, model_type=None):
             attn_implementation=ModelConfig.ATTENTION_IMPLEMENTATION
         )
         logger.info(f"Loaded DeBERTa model with {num_labels} labels")
-        
-    else:
-        raise ValueError(f"Unknown model type: {model_type}")
-    
-    return model
+
+    elif model_type == ModelType.MODERNBERT:
+        # load modernbert classifier (uses sdpa attention via ATTENTION_IMPLEMENTATION)
+        model = AutoModelForSequenceClassification.from_pretrained(
+            model_name,
+            num_labels=num_labels,
+            problem_type=ModelConfig.PROBLEM_TYPE,
+            torch_dtype=torch.float32,
+            label2id=label2id,
+            id2label=id2label,
+            attn_implementation=ModelConfig.ATTENTION_IMPLEMENTATION
+        )
+        logger.info(f"Loaded ModernBERT model with {num_labels} labels")
+
