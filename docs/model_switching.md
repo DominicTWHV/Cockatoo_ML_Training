@@ -46,6 +46,8 @@ When `MODEL_TYPE` is changed, the following values resolve automatically from `M
 | `ModelConfig.get_base_model_name()` | `cockatoo_ml/registry/model.py` |
 | `ModelConfig.get_max_token_length()` | `cockatoo_ml/registry/model.py` |
 | `TrainingConfig.GRADIENT_CHECKPOINTING` | `cockatoo_ml/registry/training.py` |
+| `TrainingConfig.USE_GRADIENT_CLIPPING` | `cockatoo_ml/registry/training.py` |
+| `TrainingConfig.MAX_GRAD_NORM` | `cockatoo_ml/registry/training.py` |
 | `TrainingConfig.USE_LLRD` | `cockatoo_ml/registry/training.py` |
 | `TrainingConfig.LLRD_DECAY_FACTOR` | `cockatoo_ml/registry/training.py` |
 
@@ -72,6 +74,8 @@ MODEL_TYPE = ModelType.MODERNBERT
 | `NUM_EPOCHS` | `3` | `ModelTrainingConfig.MODERNBERT_NUM_EPOCHS` |
 | `USE_FP16` | `True` | `ModelTrainingConfig.MODERNBERT_USE_FP16` |
 | `GRADIENT_CHECKPOINTING` | `True` | `ModelTrainingConfig.MODERNBERT_GRADIENT_CHECKPOINTING` |
+| `USE_GRADIENT_CLIPPING` | `True` | `ModelTrainingConfig.MODERNBERT_USE_GRADIENT_CLIPPING` |
+| `MAX_GRAD_NORM` | `1.0` | `ModelTrainingConfig.MODERNBERT_MAX_GRAD_NORM` |
 | `ATTENTION_IMPLEMENTATION` | `sdpa` | auto-derived in `ModelConfig` |
 | `MODERNBERT_DTYPE` | `float32` | `ModelConfig.MODERNBERT_DTYPE` |
 | Max token length (train) | `512` | `ModelConfig.MODERNBERT_MAX_TOKEN_LENGTH` |
@@ -111,6 +115,8 @@ MODEL_TYPE = ModelType.CLIP_VIT
 | `NUM_EPOCHS` | `3` | `ModelTrainingConfig.CLIP_NUM_EPOCHS` |
 | `USE_FP16` | `True` | `ModelTrainingConfig.CLIP_USE_FP16` |
 | `GRADIENT_CHECKPOINTING` | `False` | `ModelTrainingConfig.CLIP_GRADIENT_CHECKPOINTING` |
+| `USE_GRADIENT_CLIPPING` | `True` | `ModelTrainingConfig.CLIP_USE_GRADIENT_CLIPPING` |
+| `MAX_GRAD_NORM` | `1.0` | `ModelTrainingConfig.CLIP_MAX_GRAD_NORM` |
 | `ATTENTION_IMPLEMENTATION` | `default` | auto-derived in `ModelConfig` |
 | Max token length (train) | `77` | `ModelConfig.CLIP_MAX_TOKEN_LENGTH` |
 | Max token length (inference) | `77` | `ModelConfig.CLIP_MAX_INFERENCING_TOKEN_LENGTH` |
@@ -147,6 +153,8 @@ MODEL_TYPE = ModelType.DEBERTA
 | `NUM_EPOCHS` | `3` | `ModelTrainingConfig.DEBERTA_NUM_EPOCHS` |
 | `USE_FP16` | `True` | `ModelTrainingConfig.DEBERTA_USE_FP16` |
 | `GRADIENT_CHECKPOINTING` | `False` | `ModelTrainingConfig.DEBERTA_GRADIENT_CHECKPOINTING` |
+| `USE_GRADIENT_CLIPPING` | `True` | `ModelTrainingConfig.DEBERTA_USE_GRADIENT_CLIPPING` |
+| `MAX_GRAD_NORM` | `1.0` | `ModelTrainingConfig.DEBERTA_MAX_GRAD_NORM` |
 | `ATTENTION_IMPLEMENTATION` | `default` | auto-derived in `ModelConfig` |
 | Max token length (train) | `256` | `ModelConfig.DEBERTA_MAX_TOKEN_LENGTH` |
 | Max token length (inference) | `256` | `ModelConfig.DEBERTA_MAX_INFERENCING_TOKEN_LENGTH` |

@@ -17,6 +17,8 @@ class ModelTrainingConfig:
     CLIP_USE_BF16 = False  # older hardware, no modern api support
     CLIP_USE_TF32 = False
     CLIP_GRADIENT_CHECKPOINTING = False
+    CLIP_USE_GRADIENT_CLIPPING = True
+    CLIP_MAX_GRAD_NORM = 1.0
     CLIP_USE_LLRD = False  # LLRD not well-suited to CLIP's custom dual-encoder head architecture
     CLIP_LLRD_DECAY_FACTOR = 0.9
 
@@ -33,6 +35,8 @@ class ModelTrainingConfig:
     DEBERTA_USE_BF16 = False  # older hardware, no modern api support
     DEBERTA_USE_TF32 = False
     DEBERTA_GRADIENT_CHECKPOINTING = False
+    DEBERTA_USE_GRADIENT_CLIPPING = True
+    DEBERTA_MAX_GRAD_NORM = 1.0
     DEBERTA_USE_LLRD = False
     DEBERTA_LLRD_DECAY_FACTOR = 0.9
 
@@ -48,6 +52,8 @@ class ModelTrainingConfig:
     MODERNBERT_USE_BF16 = False  # older hardware, no modern api
     MODERNBERT_USE_TF32 = False
     MODERNBERT_GRADIENT_CHECKPOINTING = True  # reduces VRAM at the cost of ~20% slower training (recommended to leave on for modernbert)
+    MODERNBERT_USE_GRADIENT_CLIPPING = True
+    MODERNBERT_MAX_GRAD_NORM = 1.0
     MODERNBERT_USE_LLRD = True
     MODERNBERT_LLRD_DECAY_FACTOR = 0.9
 
@@ -68,6 +74,10 @@ class TrainingConfig:
     USE_FP16 = ModelTrainingConfig.CLIP_USE_FP16 if ModelConfig.MODEL_TYPE == ModelType.CLIP_VIT else ModelTrainingConfig.DEBERTA_USE_FP16 if ModelConfig.MODEL_TYPE == ModelType.DEBERTA else ModelTrainingConfig.MODERNBERT_USE_FP16
     USE_BF16 = ModelTrainingConfig.CLIP_USE_BF16 if ModelConfig.MODEL_TYPE == ModelType.CLIP_VIT else ModelTrainingConfig.DEBERTA_USE_BF16 if ModelConfig.MODEL_TYPE == ModelType.DEBERTA else ModelTrainingConfig.MODERNBERT_USE_BF16
     USE_TF32 = ModelTrainingConfig.CLIP_USE_TF32 if ModelConfig.MODEL_TYPE == ModelType.CLIP_VIT else ModelTrainingConfig.DEBERTA_USE_TF32 if ModelConfig.MODEL_TYPE == ModelType.DEBERTA else ModelTrainingConfig.MODERNBERT_USE_TF32
+
+    # gradient clipping
+    USE_GRADIENT_CLIPPING = ModelTrainingConfig.CLIP_USE_GRADIENT_CLIPPING if ModelConfig.MODEL_TYPE == ModelType.CLIP_VIT else ModelTrainingConfig.DEBERTA_USE_GRADIENT_CLIPPING if ModelConfig.MODEL_TYPE == ModelType.DEBERTA else ModelTrainingConfig.MODERNBERT_USE_GRADIENT_CLIPPING
+    MAX_GRAD_NORM = ModelTrainingConfig.CLIP_MAX_GRAD_NORM if ModelConfig.MODEL_TYPE == ModelType.CLIP_VIT else ModelTrainingConfig.DEBERTA_MAX_GRAD_NORM if ModelConfig.MODEL_TYPE == ModelType.DEBERTA else ModelTrainingConfig.MODERNBERT_MAX_GRAD_NORM
     
     # eval and logging
     EVAL_STRATEGY = 'epoch' # options: 'no', 'steps', 'epoch'
