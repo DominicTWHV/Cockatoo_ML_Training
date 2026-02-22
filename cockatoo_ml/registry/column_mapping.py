@@ -17,11 +17,9 @@ class DatasetColumnMapping:
     HATE_SPEECH = {
         'text_col': 'text',
         'labels': {
-            'hate_speech': 'hate_speech_score',  # continuous score, will threshold
-            'violence': 'violence',  # binary: 1 if mentions violence
-            'harassment': ['insult', 'humiliate', 'dehumanize'],  # multiple columns, OR them
-            'dehumanization': 'dehumanize',  # direct binary column
-            'status': 'status',  # binary: attacks person's status
+            'hate_speech': 'hatespeech',  # boolean per-annotator column
+            'violence': ['violence', 'genocide'],  # merge: violence or genocide mention
+            'harassment': ['insult', 'humiliate', 'dehumanize', 'attack_defend'],  # merge: any harassment signal
         }
     }
     
@@ -33,6 +31,16 @@ class DatasetColumnMapping:
         }
     }
     
+    # Tweet Evaluation - Emotion config column mapping
+    # The emotion config has a multiclass label: 0=anger, 1=joy, 2=optimism, 3=sadness
+    # The data loader pre-processes this into a binary 'anger' column before extraction
+    TWEET_EMOTION = {
+        'text_col': 'text',
+        'labels': {
+            'hate_speech': 'anger',  # anger tweets (label==0) used as hate_speech signal
+        }
+    }
+
     # Toxic Chat dataset column mapping
     TOXICCHAT = {
         'text_col': 'user_input',
@@ -63,9 +71,7 @@ class DatasetColumnMapping:
         'hate_speech': 0.5,
         'toxicity': 0.5,
         'jailbreaking': 0.5,
-        'dehumanization': 0.5,
         'obscenity': 0.5,
-        'status': 0.5,
     }
     
     # Map dataset names to their column mapping
@@ -75,6 +81,7 @@ class DatasetColumnMapping:
         'hate_speech_measuring': HATE_SPEECH,
         'tweet_hate': TWEET_HATE,
         'tweet_eval': TWEET_HATE,
+        'tweet_emotion': TWEET_EMOTION,
         'toxicchat': TOXICCHAT,
         'jigsaw': JIGSAW,
     }

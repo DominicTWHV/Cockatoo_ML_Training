@@ -18,8 +18,8 @@ class DatasetLabelMapping:
                 'description': 'Phishing dataset - contains scam labels'
             },
             'hate_speech': {
-                'labels': ['hate_speech', 'violence', 'harassment', 'dehumanization', 'status'],
-                'description': 'Measuring hate speech - multiple hate speech related labels'
+                'labels': ['hate_speech', 'violence', 'harassment'],
+                'description': 'Measuring hate speech - hate_speech, violence, and harassment labels'
             },
             'tweet_hate': {
                 'labels': ['hate_speech'],
@@ -27,7 +27,7 @@ class DatasetLabelMapping:
             },
             'toxicchat': {
                 'labels': ['toxicity', 'jailbreaking'],
-                'description': 'Toxic chat - contains toxicity and jailbreaking labels'
+                'description': 'Toxic chat - toxicity and jailbreaking labels'
             },
             'jigsaw': {
                 'labels': ['toxicity', 'obscenity', 'violence', 'harassment', 'hate_speech'],
