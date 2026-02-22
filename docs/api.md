@@ -1,7 +1,9 @@
 # API Endpoints (inference server):
 
 **Endpoint:** `/health`
+
 **Method:** `GET`
+
 **Description:** Checks if the server is responding and healthy. Returns a simple JSON response indicating the status and the active model version.
 
 ```json
@@ -14,8 +16,11 @@
 ---
 
 **Endpoint:** `/predict`
+
 **Method:** `POST`
+
 **Description:** Classifies a single string. Supports a global threshold or a per-label mapping.
+
 **Request Body:**
 
 ```json
@@ -50,8 +55,11 @@
 ---
 
 **Endpoint:** `/batch`
+
 **Method:** `POST`
+
 **Description:** Classifies a list of strings in a single request.
+
 **Request Body:**
 
 ```json
