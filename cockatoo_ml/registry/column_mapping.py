@@ -72,7 +72,6 @@ class DatasetColumnMapping:
         'hate_speech_measuring': HATE_SPEECH,
         'tweet_hate': TWEET_HATE,
         'tweet_eval': TWEET_HATE,
-        'tweet_emotion': TWEET_EMOTION,
         'toxicchat': TOXICCHAT,
         'jigsaw': JIGSAW,
     }

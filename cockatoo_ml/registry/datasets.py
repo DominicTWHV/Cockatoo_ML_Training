@@ -37,7 +37,6 @@ class DatasetPaths:
     # Tweet evaluation dataset
     TWEET_EVAL_DIR = "tweet_eval"
     TWEET_EVAL_HATE_SUBDIR = "hate"
-    TWEET_EVAL_EMOTION_SUBDIR = "emotion"
     TWEET_EVAL_FILE = "train-00000-of-00001.parquet"
     
     # Toxic chat dataset

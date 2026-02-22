@@ -186,7 +186,6 @@ def load_all_datasets(base_dir=None):
         load_phishing_dataset,
         load_hate_speech_dataset,
         load_tweet_hate_dataset,
-        load_tweet_emotion_dataset,
         load_toxicchat_dataset,
         load_jigsaw_dataset,
     ]
