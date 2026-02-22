@@ -1,6 +1,6 @@
 # Cockatoo ML Training/Inferencing server
 
-This repository is provided as a reference implementation for the training/inferencing server component of Cockatoo. We have designed it to fit our specific use case, but it was also designed with flexibility in mind.
+This repository is what we plan to use for the training/inferencing server component of Cockatoo. We have designed it to fit our specific use case, but it was also designed with flexibility in mind.
 
 [![CodeQL](https://github.com/DominicTWHV/Cockatoo_ML_Training/actions/workflows/github-code-scanning/codeql/badge.svg)](https://github.com/DominicTWHV/Cockatoo_ML_Training/actions/workflows/github-code-scanning/codeql)
 
@@ -10,22 +10,15 @@ This repository is provided as a reference implementation for the training/infer
 
 ---
 
-## Model Architecture
+## Model Architecture (currently supported):
 
-**Current Default: CLIP ViT-L-14**
+**CLIP ViT-L-14** (HIGHLY EXPERIMENTAL - Untested)
 
-This codebase now defaults to training **CLIP ViT-L-14** for multi-modal content classification. The model can process:
-- Text-only inputs
-- Text + image inputs
+**DeBERTa V3** (Stable)
 
-**Also Supported: DeBERTa V3**
+**ModernBERT** (Experimental)
 
-DeBERTa V3 text classification is still supported through configuration. To switch to DeBERTa:
-
-1. Edit `cockatoo_ml/registry/model.py`
-2. Change `MODEL_TYPE = ModelType.CLIP_VIT` to `MODEL_TYPE = ModelType.DEBERTA`
-
-The codebase will automatically adapt to use the appropriate model architecture, tokenization, and training parameters.
+For config changes needed to switch between models, reference the model switching guide [here](/docs/model_switching.md).
 
 ---
 
@@ -88,16 +81,6 @@ Preprocess dataset:
 python3 prepare_data.py
 ```
 
-> [!Important]
-> Before you start the training loop, please review the trainer configs at `cockatoo_ml/registry/training.py` and adjust them as needed. 
-> 
-> **CLIP Training Notes:**
-> - Default batch size is 16 (reduced from 24 for DeBERTa due to larger model size)
-> - Learning rate is 1e-5 (lower than DeBERTa's 2e-5 for stability)
-> - Gradient accumulation steps increased to 6 to maintain effective batch size
-> - If you run into OOM errors, reduce batch size or increase gradient accumulation
-> - CLIP benefits from mixed precision training (FP16 enabled by default)
-
 Run training loop:
 
 ```bash
@@ -126,52 +109,7 @@ python3 train.py --eval-only --eval-split validation #for testing against the va
 
 **Metrics Telemetry**
 
-We have integrated a hook to push training data live to an API server. You can modify the settings in `cockatoo_ml/registry/api.py`. If your remote API server expects an authentication token, edit the `.env` file to include the token.
-
-The telemetry hook can be enabled independently for training and validation:
-
-- Training telemetry: `WebhookConfig.enable` (uses `METRICS_WEBHOOK_URL`)
-- Validation telemetry: `WebhookConfig.enable_validation` (uses `METRICS_VALIDATION_WEBHOOK_URL`)
-
-This is the telemetry system we use at [cockatoo.dev](https://cockatoo.dev/ml-training.html) to monitor and publish training data across all our models in one place.
-
-*Note: This telemetry is not something that sends us information. It is a system that you can use to send live training data to your own servers.*
-
-**Telemetry API Output**
-
-Training endpoint payload:
-
-```json
-{
-  "experiment_id": "constellation-one-text-001",
-  "global_step": null,
-  "epoch": 1.0,
-  "metrics": {
-    "loss": 0.4312,
-    "learning_rate": 1.5e-05,
-    "step": 120
-  },
-  "timestamp": "2026-02-13 18:12:03.123456"
-}
-```
-
-Validation endpoint payload:
-
-```json
-{
-  "experiment_id": "constellation-one-text-001",
-  "global_step": 120,
-  "epoch": 1.0,
-  "metrics": {
-    "eval_loss": 0.3891,
-    "eval_f1": 0.9123,
-    "eval_precision": 0.9011,
-    "eval_recall": 0.9239
-  },
-  "timestamp": "2026-02-13 18:12:03.654321",
-  "is_eval": true
-}
-```
+Moved! Read the telemetry docs [here](/docs/telemetry.md)!
 
 **Evaluation Generation**
 
@@ -202,101 +140,7 @@ source venv/bin/activate
 hypercorn app:app --bind 0.0.0.0:8000
 ```
 
-## Endpoints:
-
-**Endpoint:** `/health`
-**Method:** `GET`
-**Description:** Checks if the server is responding and healthy. Returns a simple JSON response indicating the status and the active model version.
-
-```json
-{
-  "status": "ok",
-  "model": "constellation_one_text"
-}
-```
-
----
-
-**Endpoint:** `/predict`
-**Method:** `POST`
-**Description:** Classifies a single string. Supports a global threshold or a per-label mapping.
-**Request Body:**
-
-```json
-{
-  "text": "The text to classify",
-  "threshold": 0.5 
-}
-
-```
-
-> **Note:** `threshold` is optional. It can be a **float** (0.5), a **dictionary** (`{"LABEL_1": 0.8, "LABEL_2": 0.4}`), or `null`. If `null`, the system defaults to per-label thresholds defined in the classifier configuration.
-
-**Response Body:**
-
-```json
-{
-  "text": "The text to classify",
-  "predictions": {
-    "LABEL_1": 0.12,
-    "LABEL_2": 0.05,
-    "LABEL_3": 0.9944
-  },
-  "positive_labels": ["LABEL_3"],
-  "top_label": "LABEL_3",
-  "max_score": 0.9944
-}
-
-```
-
-> **Note:** The `predictions` field contains **all labels** from the model with their respective confidence scores, regardless of the threshold. The `positive_labels` field is a convenience filter showing only labels that meet the threshold criteria.
-
----
-
-**Endpoint:** `/batch`
-**Method:** `POST`
-**Description:** Classifies a list of strings in a single request.
-**Request Body:**
-
-```json
-{
-  "texts": [
-    "First text to classify",
-    "Second text to classify"
-  ],
-  "threshold": {
-    "LABEL_3": 0.90
-  }
-}
-
-```
-
-**Response Body:**
-
-```json
-{
-  "count": 2,
-  "results": [
-    {
-      "text": "First text to classify",
-      "predictions": { "LABEL_1": 0.05, "LABEL_2": 0.02, "LABEL_3": 0.9944 },
-      "positive_labels": ["LABEL_3"],
-      "top_label": "LABEL_3",
-      "max_score": 0.9944
-    },
-    {
-      "text": "Second text to classify",
-      "predictions": { "LABEL_1": 0.10, "LABEL_2": 0.05, "LABEL_3": 0.85 },
-      "positive_labels": [],
-      "top_label": "LABEL_3",
-      "max_score": 0.85
-    }
-  ]
-}
-
-```
-
-> **Note:** The `predictions` field in each result contains **all labels** from the model with their respective confidence scores, regardless of the threshold. The `positive_labels` field is a convenience filter showing only labels that meet the threshold criteria.
+Read about the inference server API docs [here](/docs/api.md).
 
 ## Licensing:
 
