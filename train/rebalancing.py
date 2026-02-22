@@ -53,30 +53,6 @@ def calculate_class_weights(labels_column, method="inverse_frequency", smoothing
     return torch.tensor(weights, dtype=torch.float32)
 
 
-def calculate_per_sample_weights(labels_df, class_weights):
-    # labels_df: a dataframe where each column corresponds to a label and contains binary indicators (0/1) for whether that label is present in the sample
-    # class_weights: a tensor of shape [num_classes] containing the weight for each class (computed by calculate_class_weights)
-
-    label_matrix = labels_df.values.astype(float)
-    class_weights_np = class_weights.numpy()
-    
-    # for each sample, get the maximum weight among its positive classes
-    # if a sample has no positive labels, assign weight 1.0 (median)
-    sample_weights = []
-    for row in label_matrix:
-        positive_indices = np.where(row > 0)[0]
-        if len(positive_indices) > 0:
-            weight = class_weights_np[positive_indices].max()
-        else:
-            weight = 1.0
-        sample_weights.append(weight)
-    
-    weights = torch.tensor(sample_weights, dtype=torch.float32)
-    logger.info(f"Per-sample weight stats - min: {weights.min():.4f}, max: {weights.max():.4f}, mean: {weights.mean():.4f}")
-    
-    return weights
-
-
 def rebalance_dataset(df, policy=None, random_state=None):
     # apply rebalancing policy to the df
     

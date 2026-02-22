@@ -1,4 +1,3 @@
-import json
 
 from pathlib import Path
 
@@ -162,17 +161,3 @@ def plot_eval_metrics(eval_data: Dict[str, Any], experiment_name: str, model_nam
     logger.info(f"All evaluation plots saved to: {output_path.absolute()}")
     
     return output_path
-
-
-def load_and_plot_eval_data(json_file_path: str, experiment_name: str, model_name: str, epoch_num: Optional[int] = None, output_dir: str = 'graph') -> Path:
-    # load json file and plot data
-    
-    json_path = Path(json_file_path)
-    
-    if not json_path.exists():
-        raise FileNotFoundError(f"JSON file not found: {json_file_path}")
-    
-    with open(json_path, 'r') as f:
-        eval_data = json.load(f)
-    
-    return plot_eval_metrics(eval_data, experiment_name, model_name, epoch_num, output_dir)

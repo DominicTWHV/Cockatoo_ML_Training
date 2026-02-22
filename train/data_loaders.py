@@ -7,28 +7,6 @@ from cockatoo_ml.registry.column_mapping import DatasetColumnMapping, merge_mult
 from cockatoo_ml.logger.context import data_processing_logger as logger
 
 
-def find_text_column(df, preferred_cols=None):
-    # find text col in dataframe using preferred columns or fallback candidates
-    if preferred_cols:
-        if isinstance(preferred_cols, str):
-            if preferred_cols in df.columns:
-                logger.info(f"Found text column: {preferred_cols}")
-                return preferred_cols
-        else:
-            for col in preferred_cols:
-                if col in df.columns:
-                    logger.info(f"Found text column: {col}")
-                    return col
-    
-    # fallback to text candidates
-    for col in DatasetColumns.TEXT_CANDIDATES:
-        if col in df.columns:
-            logger.info(f"Found text column: {col}")
-            return col
-        
-    return None
-
-
 def extract_labels_from_df(df, mapping, dataset_name):
     # extract and merge labels from dataframe using column mapping
 

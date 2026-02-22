@@ -88,12 +88,3 @@ _global_mapping = DatasetLabelMapping()
 
 def get_dataset_label_mapping():
     return _global_mapping
-
-def register_dataset(dataset_name, labels, description=""):
-    _global_mapping.register(dataset_name, labels, description)
-
-def get_dataset_labels(dataset_name):
-    return _global_mapping.get_labels(dataset_name)
-
-def get_dataset_label_mask(dataset_name):
-    return _global_mapping.get_mask(dataset_name)
