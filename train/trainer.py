@@ -2,6 +2,9 @@ import torch
 
 from transformers import Trainer
 
+from cockatoo_ml.registry import TrainingConfig
+from train.losses import AsymmetricLoss, BCEWithLogitsLoss
+
 
 class CustomTrainer(Trainer):
     # custom trainer to handle bce loss with pos_weight (or pre-computed class weights) and optional label masking for multi-label classification
@@ -11,15 +14,57 @@ class CustomTrainer(Trainer):
         self.compute_metrics_func = kwargs.get('compute_metrics')
         
         super().__init__(*args, **kwargs)
-        # BCEWithLogitsLoss handles the internal conversion to half if needed
         self.pos_weight = pos_weight.to(self.model.device) if pos_weight is not None else None
         self.eval_thresholds = eval_thresholds  # custom thresholds dict for evaluation (label -> threshold)
+        self.loss_fn_name = getattr(TrainingConfig, 'LOSS_FUNCTION', 'bce').lower()
 
-        if self.pos_weight is not None:
-            self.loss_fct = torch.nn.BCEWithLogitsLoss(pos_weight=self.pos_weight, reduction='none')
+        # pre-build a static loss instance
+        if self.loss_fn_name == 'asl':
+            self.loss_fct = AsymmetricLoss(
+                gamma_neg=getattr(TrainingConfig, 'ASL_GAMMA_NEG', 4),
+                gamma_pos=getattr(TrainingConfig, 'ASL_GAMMA_POS', 1),
+                clip=getattr(TrainingConfig, 'ASL_CLIP', 0.05),
+                reduction='none',
+            )
 
         else:
-            self.loss_fct = torch.nn.BCEWithLogitsLoss(reduction='none')
+            # default to BCEWithLogitsLoss — pos_weight applied in compute_loss per-device
+            self.loss_fct = BCEWithLogitsLoss(pos_weight=self.pos_weight, reduction='none')
+
+    def create_optimizer(self):
+        # create optimizer according to registry TrainingConfig
+        if getattr(self, 'optimizer', None) is not None:
+            return self.optimizer
+
+        opt_name = getattr(TrainingConfig, 'OPTIMIZER', 'adamw_8bit')
+        lr = getattr(self.args, 'learning_rate', None) or getattr(self.args, 'lr', None) or 1e-5
+        weight_decay = getattr(TrainingConfig, 'WEIGHT_DECAY', 0.0)
+        betas = getattr(TrainingConfig, 'OPTIMIZER_BETAS', (0.9, 0.999))
+        eps = getattr(TrainingConfig, 'OPTIMIZER_EPS', 1e-8)
+
+        if opt_name == 'adamw_8bit':
+            try:
+                from bitsandbytes.optim import Adam8bit
+
+                optimizer = Adam8bit(self.model.parameters(), lr=lr, betas=betas, eps=eps, weight_decay=weight_decay)
+            except Exception:
+                optimizer = torch.optim.AdamW(self.model.parameters(), lr=lr, betas=betas, eps=eps, weight_decay=weight_decay)
+
+        elif opt_name == 'adamw':
+            optimizer = torch.optim.AdamW(self.model.parameters(), lr=lr, betas=betas, eps=eps, weight_decay=weight_decay)
+
+        elif opt_name == 'adam':
+            optimizer = torch.optim.Adam(self.model.parameters(), lr=lr, betas=betas, eps=eps, weight_decay=weight_decay)
+
+        elif opt_name == 'sgd':
+            momentum = getattr(TrainingConfig, 'OPTIMIZER_MOMENTUM', 0.9)
+            optimizer = torch.optim.SGD(self.model.parameters(), lr=lr, momentum=momentum, weight_decay=weight_decay)
+
+        else:
+            raise ValueError(f"Unknown optimizer specified in TrainingConfig.OPTIMIZER: {opt_name}")
+
+        self.optimizer = optimizer
+        return optimizer
 
     def compute_loss(self, model, inputs, return_outputs=False, **kwargs):
         # compute loss with optional label masking for multi-label classification
@@ -37,16 +82,23 @@ class CustomTrainer(Trainer):
         
         device = logits.device
         dtype = logits.dtype
-        
-        # create loss function with reduction='none' to apply per-element masking
-        if self.pos_weight is not None:
-            loss_fct = torch.nn.BCEWithLogitsLoss(
-                pos_weight=self.pos_weight.to(device=device, dtype=dtype),
-                reduction='none'
+
+        # build the loss function for this forward pass (device/dtype aware)
+        if self.loss_fn_name == 'asl':
+            # asl does not use pos_weight; class imbalance is handled via the asymmetric focusing parameters and probability margin instead.
+            # so pos_weight is ignored here
+            loss_fct = AsymmetricLoss(
+                gamma_neg=getattr(TrainingConfig, 'ASL_GAMMA_NEG', 4),
+                gamma_pos=getattr(TrainingConfig, 'ASL_GAMMA_POS', 1),
+                clip=getattr(TrainingConfig, 'ASL_CLIP', 0.05),
+                reduction='none',
             )
+
         else:
-            loss_fct = torch.nn.BCEWithLogitsLoss(reduction='none')
-        
+            # imports from losses.py
+            # BCEWithLogitsLoss — pos_weight is moved to the correct device/dtype inside the wrapper
+            loss_fct = BCEWithLogitsLoss(pos_weight=self.pos_weight, reduction='none')
+
         # compute per-element loss
         loss_per_element = loss_fct(logits, labels.to(dtype))
         
