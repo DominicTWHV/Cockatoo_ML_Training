@@ -33,7 +33,7 @@ def download_dataset(repo_id, local_subdir, base_dir=None, repo_type=None):
 
 def download_all_datasets():
     # defines all sets and calls download helper, returns list of results
-    logger.info("Starting dataset downloads for Constellation One moderation engine...")
+    logger.info("Starting dataset downloads...")
     
     results = []
     for repo_id, local_subdir in DatasetSources.DATASETS:
