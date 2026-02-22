@@ -75,21 +75,73 @@ class ThreatClassifier:
 
     def _load_text_model(self, model_path: str):
         
-        # For multi-label classification, we must use manual inference (not pipeline)
-        # because the text-classification pipeline uses softmax (single-label), not sigmoid (multi-label)
+        # must use manual inference (not pipeline) because the text-classification pipeline uses softmax (single-label), not sigmoid (multi-label)
         self.tokenizer = AutoTokenizer.from_pretrained(model_path)
         ModelConfig.validate_attention_precision_compatibility()
 
+        def _is_flash_attention_error(exc: Exception) -> bool:
+            text = str(exc).lower()
+            flash_markers = (
+                "flash attention 2 only supports",
+                "flash_attn",
+                "flash_attn_2_cuda",
+                "undefined symbol",
+                "attn_implementation",
+            )
+            return any(marker in text for marker in flash_markers)
+
+        attn_implementation = ModelConfig.ATTENTION_IMPLEMENTATION
         model_dtype = ModelConfig.get_dtype()
+
+        if attn_implementation == 'flash_attention_2' and self.device == -1:
+            logger.warning("flash_attention_2 requested on CPU; falling back to sdpa for inference.")
+            attn_implementation = 'sdpa'
+
+        if attn_implementation == 'flash_attention_2' and model_dtype == 'auto':
+            if self.device == 0 and torch.cuda.is_bf16_supported():
+                model_dtype = torch.bfloat16
+
+            elif self.device == 0:
+                model_dtype = torch.float16
+
+            else:
+                model_dtype = torch.float32
+            logger.info(f"Resolved dtype='auto' to {model_dtype} for flash_attention_2 compatibility.")
+
         if self.device == -1 and model_dtype in {torch.float16, torch.bfloat16}:
             logger.warning("Half-precision dtype requested on CPU; falling back to float32 for inference.")
             model_dtype = torch.float32
 
-        self.model = AutoModelForSequenceClassification.from_pretrained(
-            model_path,
-            attn_implementation=ModelConfig.ATTENTION_IMPLEMENTATION,
-            dtype=model_dtype,
-        )
+        model_kwargs = {
+            'attn_implementation': attn_implementation,
+            'torch_dtype': model_dtype,
+        }
+
+        try:
+            self.model = AutoModelForSequenceClassification.from_pretrained(
+                model_path,
+                **model_kwargs,
+            )
+
+        except TypeError:
+            model_kwargs.pop('torch_dtype', None)
+            model_kwargs['dtype'] = model_dtype
+            self.model = AutoModelForSequenceClassification.from_pretrained(
+                model_path,
+                **model_kwargs,
+            )
+
+        except (ImportError, OSError, RuntimeError, ValueError) as exc:
+            if attn_implementation == 'flash_attention_2' and _is_flash_attention_error(exc):
+                logger.warning(f"flash_attention_2 failed ({exc}); retrying with sdpa attention.")
+                model_kwargs['attn_implementation'] = 'sdpa'
+                self.model = AutoModelForSequenceClassification.from_pretrained(
+                    model_path,
+                    **model_kwargs,
+                )
+
+            else:
+                raise
 
         if self.device == 0:
             self.model = self.model.cuda()
