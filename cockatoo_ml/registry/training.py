@@ -16,6 +16,7 @@ class ModelTrainingConfig:
     CLIP_USE_FP16 = True
     CLIP_USE_BF16 = False  # older hardware, no modern api support
     CLIP_USE_TF32 = False
+    CLIP_GRADIENT_CHECKPOINTING = False
 
     # --- DeBERTa hyperparams
 
@@ -29,6 +30,7 @@ class ModelTrainingConfig:
     DEBERTA_USE_FP16 = True
     DEBERTA_USE_BF16 = False  # older hardware, no modern api support
     DEBERTA_USE_TF32 = False
+    DEBERTA_GRADIENT_CHECKPOINTING = False
 
     # --- ModernBERT hyperparams
     MODERNBERT_NUM_EPOCHS = 3
@@ -41,6 +43,7 @@ class ModelTrainingConfig:
     MODERNBERT_USE_FP16 = True
     MODERNBERT_USE_BF16 = False  # older hardware, no modern api
     MODERNBERT_USE_TF32 = False
+    MODERNBERT_GRADIENT_CHECKPOINTING = True  # reduces VRAM at the cost of ~20% slower training (recommended to leave on for modernbert)
 
 class TrainingConfig:
     
@@ -52,14 +55,17 @@ class TrainingConfig:
     WEIGHT_DECAY = ModelTrainingConfig.CLIP_WEIGHT_DECAY if ModelConfig.MODEL_TYPE == ModelType.CLIP_VIT else ModelTrainingConfig.DEBERTA_WEIGHT_DECAY if ModelConfig.MODEL_TYPE == ModelType.DEBERTA else ModelTrainingConfig.MODERNBERT_WEIGHT_DECAY
     WARMUP_RATIO = ModelTrainingConfig.CLIP_WARMUP_RATIO if ModelConfig.MODEL_TYPE == ModelType.CLIP_VIT else ModelTrainingConfig.DEBERTA_WARMUP_RATIO if ModelConfig.MODEL_TYPE == ModelType.DEBERTA else ModelTrainingConfig.MODERNBERT_WARMUP_RATIO
     
+    # gradient checkpointing
+    GRADIENT_CHECKPOINTING = ModelTrainingConfig.CLIP_GRADIENT_CHECKPOINTING if ModelConfig.MODEL_TYPE == ModelType.CLIP_VIT else ModelTrainingConfig.DEBERTA_GRADIENT_CHECKPOINTING if ModelConfig.MODEL_TYPE == ModelType.DEBERTA else ModelTrainingConfig.MODERNBERT_GRADIENT_CHECKPOINTING
+
     # precision
     USE_FP16 = ModelTrainingConfig.CLIP_USE_FP16 if ModelConfig.MODEL_TYPE == ModelType.CLIP_VIT else ModelTrainingConfig.DEBERTA_USE_FP16 if ModelConfig.MODEL_TYPE == ModelType.DEBERTA else ModelTrainingConfig.MODERNBERT_USE_FP16
     USE_BF16 = ModelTrainingConfig.CLIP_USE_BF16 if ModelConfig.MODEL_TYPE == ModelType.CLIP_VIT else ModelTrainingConfig.DEBERTA_USE_BF16 if ModelConfig.MODEL_TYPE == ModelType.DEBERTA else ModelTrainingConfig.MODERNBERT_USE_BF16
     USE_TF32 = ModelTrainingConfig.CLIP_USE_TF32 if ModelConfig.MODEL_TYPE == ModelType.CLIP_VIT else ModelTrainingConfig.DEBERTA_USE_TF32 if ModelConfig.MODEL_TYPE == ModelType.DEBERTA else ModelTrainingConfig.MODERNBERT_USE_TF32
     
     # eval and logging
-    EVAL_STRATEGY = 'epoch'
-    SAVE_STRATEGY = 'epoch'
+    EVAL_STRATEGY = 'epoch' # options: 'no', 'steps', 'epoch'
+    SAVE_STRATEGY = 'epoch' # options: 'no', 'steps', 'epoch'
     LOAD_BEST_MODEL_AT_END = True
     METRIC_FOR_BEST_MODEL = 'f1'
     GREATER_IS_BETTER = True
