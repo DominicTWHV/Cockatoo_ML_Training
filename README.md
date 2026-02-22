@@ -22,6 +22,17 @@ For config changes needed to switch between models, reference the model switchin
 
 ---
 
+## Documentation
+
+These files will be referenced in the README as they are needed, but here are all the documentation files for quick reference:
+
+- [Model Switching Guide](/docs/model_switching.md)
+- [Dataset Rebalancing Guide](/docs/rebalancing.md)
+- [Telemetry Client](/docs/telemetry.md)
+- [Inference API Guide](/docs/api.md)
+- [Multi-Dataset Training Guide](/docs/multi_dataset_process.md)
+- [Datasets Used | Citations](/docs/datasets.md)
+
 ## Training
 
 The training code is built around torch with a pipeline pulling datasets from Hugging Face and pushing metrics to a custom API server.
