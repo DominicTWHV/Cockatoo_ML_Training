@@ -9,14 +9,14 @@ from datasets import load_from_disk
 
 from train.tokenization import get_tokenizer, tokenize_dataset
 from train.model_setup import load_model, compute_pos_weight
-from train.metrics import compute_metrics
+from train.metrics import compute_metrics, find_best_thresholds
 from train.config import get_training_args
 from train.trainer import CustomTrainer
 from train.callbacks import LiveMetricsWebhookCallback
 
 from analysis.plotting import plot_eval_metrics
 
-from cockatoo_ml.registry import PathConfig, WebhookConfig, CallbackConfig, DataSplitConfig, RebalancingPolicy, ModelConfig
+from cockatoo_ml.registry import PathConfig, WebhookConfig, CallbackConfig, DataSplitConfig, RebalancingPolicy, ModelConfig, MetricsConfig
 from cockatoo_ml.registry.column_mapping import DatasetColumnMapping
 
 from cockatoo_ml.logger.context import model_training_logger as logger
@@ -162,7 +162,20 @@ def main():
         # save the trained model
         trainer.save_model(PathConfig.MODEL_OUTPUT_DIR)
         logger.info(f"Training finished. Model saved to: {PathConfig.MODEL_OUTPUT_DIR}")
-        
+
+        # optionally sweep per-label thresholds on the validation set to find the best F1 score
+        if getattr(MetricsConfig, 'FIND_BEST_THRESHOLDS', False):
+            logger.info("Searching for best per-label thresholds on the validation set...")
+            val_preds = trainer.predict(tokenized_dataset['validation'])
+            best_thresholds = find_best_thresholds(val_preds.predictions, val_preds.label_ids)
+            logger.info("-" * 20)
+            logger.info("Best per-label thresholds (maximising F1):")
+
+            for label, result in best_thresholds.items():
+                logger.info(f"  {label:<20} threshold={result['threshold']:.4f}  f1={result['f1']:.4f}")
+
+            logger.info("-" * 20)
+
     else:
         logger.info("Eval-only mode enabled. Skipping training.")
     

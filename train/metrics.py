@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 
-from sklearn.metrics import precision_recall_fscore_support
+from sklearn.metrics import f1_score, precision_recall_fscore_support
 
 from cockatoo_ml.registry import MetricsConfig, LabelConfig
 from cockatoo_ml.registry.column_mapping import DatasetColumnMapping
@@ -68,3 +68,32 @@ def compute_metrics(eval_pred, thresholds=None):
         metrics[f'f1_{label}'] = float(f1_all[i]) if i < len(f1_all) else 0.0
 
     return metrics
+
+
+def find_best_thresholds(logits, labels):
+    # run a sweep over thresholds for each label and find the threshold that maximises F1 on the validation set
+    # returns a dict of {label: {threshold: x, f1: y}}
+    
+    probs = torch.sigmoid(torch.tensor(logits)).numpy()
+    steps = getattr(MetricsConfig, 'THRESHOLD_SEARCH_STEPS', 100)
+    candidates = np.linspace(0.0, 1.0, steps + 2)[1:-1]  # exclude 0 and 1
+    zero_division = getattr(MetricsConfig, 'ZERO_DIVISION', 0)
+
+    results = {}
+    for i, label in enumerate(LabelConfig.ACTIVE_LABELS):
+        label_probs = probs[:, i]
+        label_true = labels[:, i]
+
+        best_threshold = candidates[0]
+        best_f1 = -1.0
+
+        for threshold in candidates:
+            preds = (label_probs > threshold).astype(int)
+            score = f1_score(label_true, preds, zero_division=zero_division)
+            if score > best_f1:
+                best_f1 = score
+                best_threshold = threshold
+
+        results[label] = {'threshold': float(best_threshold), 'f1': float(best_f1)}
+
+    return results
