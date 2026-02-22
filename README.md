@@ -140,6 +140,23 @@ source venv/bin/activate
 hypercorn app:app --bind 0.0.0.0:8000
 ```
 
+The inference server uses the provided threshold values at `cockatoo_ml/registry/column_mapping.py`:
+
+```python
+LABEL_THRESHOLDS = {
+    'scam': 0.5,
+    'violence': 0.5,
+    'nsfw': 0.5,
+    'harassment': 0.5,
+    'hate_speech': 0.5,
+    'toxicity': 0.5,
+    'jailbreaking': 0.5,
+    'dehumanization': 0.5,
+    'obscenity': 0.5,
+    'status': 0.5,
+}
+```
+
 Read about the inference server API docs [here](/docs/api.md).
 
 ## Licensing:
