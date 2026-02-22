@@ -1,4 +1,4 @@
-# Model switching: config guide
+# Model switching guide
 
 ## Overview
 
@@ -6,13 +6,13 @@ All three supported model architectures share the same training pipeline. Switch
 
 ---
 
-## The single switch
+## To switch model:
 
 **File:** [cockatoo_ml/registry/model.py](/cockatoo_ml/registry/model.py)
 
 ```python
 class ModelConfig:
-    MODEL_TYPE = ModelType.CLIP_VIT      # change this
+    MODEL_TYPE = ModelType.CLIP_VIT # change this
 ```
 
 Available values:
@@ -44,10 +44,13 @@ When `MODEL_TYPE` is changed, the following values resolve automatically from `M
 | `ModelConfig.INFERENCE_MAX_LENGTH` | `cockatoo_ml/registry/model.py` |
 | `ModelConfig.get_base_model_name()` | `cockatoo_ml/registry/model.py` |
 | `ModelConfig.get_max_token_length()` | `cockatoo_ml/registry/model.py` |
+| `ModelConfig.GRADIENT_CHECKPOINTING` | `cockatoo_ml/registry/model.py` | 
+| `TrainingConfig.USE_LLRD` | `cockatoo_ml/registry/training.py` |
+| `TrainingConfig.LLRD_DECAY_FACTOR` | `cockatoo_ml/registry/training.py` |
 
 ---
 
-## Per-model optimal configs
+## Per-model configs (defaults)
 
 ### ModernBERT Large
 
@@ -70,6 +73,8 @@ MODEL_TYPE = ModelType.MODERNBERT
 | `ATTENTION_IMPLEMENTATION` | `sdpa` | auto-derived in `ModelConfig` |
 | Max token length (train) | `512` | `ModelConfig.MODERNBERT_MAX_TOKEN_LENGTH` |
 | Max token length (inference) | `8192` | `ModelConfig.MODERNBERT_MAX_INFERENCING_TOKEN_LENGTH` |
+| `USE_LLRD` | `False` | `ModelTrainingConfig.MODERNBERT_USE_LLRD` |
+| `LLRD_DECAY_FACTOR` | `0.9` | `ModelTrainingConfig.MODERNBERT_LLRD_DECAY_FACTOR` |
 | `OPTIMIZER` | `adamw_8bit` | `TrainingConfig.OPTIMIZER` (shared) |
 | `LOSS_FUNCTION` | `asl` | `TrainingConfig.LOSS_FUNCTION` (shared) |
 
@@ -103,6 +108,8 @@ MODEL_TYPE = ModelType.CLIP_VIT
 | Max token length (train) | `77` | `ModelConfig.CLIP_MAX_TOKEN_LENGTH` |
 | Max token length (inference) | `77` | `ModelConfig.CLIP_MAX_INFERENCING_TOKEN_LENGTH` |
 | `CLIP_PROJECTION_DIM` | `768` | `ModelConfig.CLIP_PROJECTION_DIM` |
+| `USE_LLRD` | `False` | `ModelTrainingConfig.CLIP_USE_LLRD` |
+| `LLRD_DECAY_FACTOR` | `0.9` | `ModelTrainingConfig.CLIP_LLRD_DECAY_FACTOR` |
 | `OPTIMIZER` | `adamw_8bit` | `TrainingConfig.OPTIMIZER` (shared) |
 | `LOSS_FUNCTION` | `asl` | `TrainingConfig.LOSS_FUNCTION` (shared) |
 
@@ -135,6 +142,8 @@ MODEL_TYPE = ModelType.DEBERTA
 | `ATTENTION_IMPLEMENTATION` | `default` | auto-derived in `ModelConfig` |
 | Max token length (train) | `256` | `ModelConfig.DEBERTA_MAX_TOKEN_LENGTH` |
 | Max token length (inference) | `256` | `ModelConfig.DEBERTA_MAX_INFERENCING_TOKEN_LENGTH` |
+| `USE_LLRD` | `False` | `ModelTrainingConfig.DEBERTA_USE_LLRD` |
+| `LLRD_DECAY_FACTOR` | `0.9` | `ModelTrainingConfig.DEBERTA_LLRD_DECAY_FACTOR` |
 | `OPTIMIZER` | `adamw_8bit` | `TrainingConfig.OPTIMIZER` (shared) |
 | `LOSS_FUNCTION` | `asl` | `TrainingConfig.LOSS_FUNCTION` (shared) |
 
@@ -175,3 +184,53 @@ The following `TrainingConfig` values in [`cockatoo_ml/registry/training.py`](/c
 | `SAVE_TOTAL_LIMIT` | `2` | Only keep 2 most recent checkpoints |
 
 To tune these for a specific model, you can override the value conditionally in `training.py` following the same pattern already used for batch size and learning rate.
+
+---
+
+## Layer-wise Learning Rate Decay (LLRD)
+
+LLRD assigns progressively lower learning rates to earlier (deeper) layers of the model. The classifier head receives the full `LEARNING_RATE`; each layer closer to the embedding input is scaled down by `LLRD_DECAY_FACTOR`:
+
+$$\text{lr}_{d} = \text{LEARNING\_RATE} \times \text{LLRD\_DECAY\_FACTOR}^{\,d}$$
+
+where $d = 0$ for the classifier head and increments by 1 for each layer toward the input embeddings.
+
+**Rationale:** The lower layers of a pretrained transformer already encode strong general representations. Giving them a lower LR preserves those representations while allowing the top layers and classification head to adapt more aggressively to the target task.
+
+---
+
+### Enabling LLRD
+
+In [`cockatoo_ml/registry/training.py`](/cockatoo_ml/registry/training.py), set the flag for the relevant model:
+
+```python
+class ModelTrainingConfig:
+    DEBERTA_USE_LLRD = True
+    DEBERTA_LLRD_DECAY_FACTOR = 0.9   # try 0.8–0.65 for more aggressive decay
+```
+
+`USE_LLRD` and `LLRD_DECAY_FACTOR` are then resolved automatically in `TrainingConfig` using the same per-model auto-derive pattern as `BATCH_SIZE`, `LEARNING_RATE`, etc. 
+
+---
+
+### Implementation detail
+
+When `USE_LLRD = True`, `CustomTrainer.create_optimizer` calls `_build_llrd_param_groups`, which:
+
+1. Scans all named parameters and identifies transformer layer indices via the regex `\.layers?\.N\.` — this covers `encoder.layer.N.` (DeBERTa), `layers.N.` (ModernBERT), and `encoder.layers.N.` (CLIP text/vision encoders).
+2. Assigns classifier / head / pooler parameters to the **top group** (depth $d=0$ → full `LEARNING_RATE`).
+3. Assigns each transformer layer at depth $d$ the learning rate $\text{LEARNING\_RATE} \times \text{LLRD\_DECAY\_FACTOR}^{d}$.
+4. Assigns embeddings and all remaining parameters to the **bottom group** (depth $d = N_{\text{layers}} + 1$ → lowest LR).
+5. `bias`, `LayerNorm.weight`, and `layer_norm.weight` within every group are placed in a zero-weight-decay subgroup (standard practice).
+
+LLRD operates at the optimizer level and is fully compatible with `adamw_8bit`, `adamw`, `adam`, and `sgd`.
+
+---
+
+### Recommended starting values
+
+| Model | `USE_LLRD` | `LLRD_DECAY_FACTOR` | Notes |
+|---|---|---|---|
+| ModernBERT | `True` | `0.9` | 28 layers; mild decay is usually sufficient |
+| DeBERTa | `True` | `0.9` | 12 layers; try `0.85` for more differentiation between layers |
+| CLIP | `False` | `0.9` | Dual-encoder architecture makes LLRD less straightforward; leave disabled unless experimenting |
