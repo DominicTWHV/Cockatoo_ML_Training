@@ -36,9 +36,22 @@ def compute_metrics(eval_pred, thresholds=None):
         valid_idx = [i for i, s in enumerate(support) if s > 0]
 
     if valid_idx:
-        p = float(torch.tensor([p_all[i] for i in valid_idx]).mean().item())
-        r = float(torch.tensor([r_all[i] for i in valid_idx]).mean().item())
-        f1 = float(torch.tensor([f1_all[i] for i in valid_idx]).mean().item())
+        strategy = MetricsConfig.AVERAGE_STRATEGY
+        if strategy == 'macro':
+            # unweighted mean over valid labels only
+            p = float(np.mean([p_all[i] for i in valid_idx]))
+            r = float(np.mean([r_all[i] for i in valid_idx]))
+            f1 = float(np.mean([f1_all[i] for i in valid_idx]))
+            
+        else:
+            # micro / weighted: delegate to sklearn on the valid label columns
+            p, r, f1, _ = precision_recall_fscore_support(
+                labels[:, valid_idx],
+                preds[:, valid_idx],
+                average=strategy,
+                zero_division=MetricsConfig.ZERO_DIVISION
+            )
+            p, r, f1 = float(p), float(r), float(f1)
     else:
         p, r, f1 = 0.0, 0.0, 0.0
 

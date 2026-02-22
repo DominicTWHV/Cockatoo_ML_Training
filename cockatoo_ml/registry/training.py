@@ -101,6 +101,11 @@ class MetricsConfig:
     # per-label thresholds override this value, and can be configured in cockatoo_ml/registry/column_mapping.py DatasetColumnMapping.LABEL_THRESHOLDS
     PREDICTION_THRESHOLD = 0.5
     
+    # averaging strategy for aggregate metrics (precision/recall/f1 overall)
+    # options: 'macro' (unweighted mean), 'micro' (global counts), 'weighted' (support-weighted mean)
+    # note: empty labels are still excluded (or included) per INCLUDE_EMPTY_LABELS regardless of strategy
+    AVERAGE_STRATEGY = 'macro'
+
     # exclude labels with zero support from macro averaging
     INCLUDE_EMPTY_LABELS = False
     
