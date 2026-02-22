@@ -18,8 +18,8 @@ class DatasetLabelMapping:
                 'description': 'Phishing dataset - contains scam labels'
             },
             'hate_speech': {
-                'labels': ['hate_speech', 'violence', 'harassment'],
-                'description': 'Measuring hate speech - hate_speech, violence, and harassment labels'
+                'labels': ['hate_speech', 'violence', 'harassment', 'genocide'],
+                'description': 'Measuring hate speech - hate_speech, violence, harassment, and genocide labels'
             },
             'tweet_hate': {
                 'labels': ['hate_speech'],

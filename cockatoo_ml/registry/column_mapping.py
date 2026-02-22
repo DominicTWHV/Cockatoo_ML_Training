@@ -18,8 +18,9 @@ class DatasetColumnMapping:
         'text_col': 'text',
         'labels': {
             'hate_speech': 'hatespeech',  # boolean per-annotator column
-            'violence': ['violence', 'genocide'],  # merge: violence or genocide mention
-            'harassment': ['insult', 'humiliate', 'dehumanize', 'attack_defend'],  # merge: any harassment signal
+            'violence': ['violence'],
+            'genocide': ['genocide'],
+            'harassment': ['insult', 'humiliate', 'dehumanize'],  # merge: any harassment signal
         }
     }
     
