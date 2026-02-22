@@ -79,13 +79,11 @@ class LiveMetricsWebhookCallback(TrainerCallback):
         
         if metrics:
 
-            json_payload = json.dumps(metrics, default=str)
-
             payload = {
                 "experiment_id": self.experiment_id,
                 "global_step": state.global_step,
                 "epoch": state.epoch,
-                "metrics": json_payload,
+                "metrics": metrics,
                 "timestamp": str(datetime.now(timezone.utc).replace(tzinfo=None)),
                 "is_eval": True
             }
