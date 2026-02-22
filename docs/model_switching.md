@@ -23,7 +23,7 @@ Available values:
 | `ModelType.DEBERTA` | Text-only (DeBERTa) | `microsoft/deberta-v3-base` |
 | `ModelType.MODERNBERT` | Text-only (ModernBERT) | `answerdotai/ModernBERT-large` |
 
-Because `TrainingConfig`, `ModelConfig.ATTENTION_IMPLEMENTATION`, and `ModelConfig.INFERENCE_MAX_LENGTH` are all evaluated at class-definition time (module import), the correct per-model values are picked up automatically. There is no need to touch `training.py` or `paths.py` for a standard model switch.
+Because `TrainingConfig`, `ModelConfig.ATTENTION_IMPLEMENTATION`, `ModelConfig.get_dtype()`, and `ModelConfig.INFERENCE_MAX_LENGTH` are all evaluated from the registry, the correct per-model values are picked up automatically. There is no need to touch `training.py` or `paths.py` for a standard model switch.
 
 ---
 
@@ -41,6 +41,7 @@ When `MODEL_TYPE` is changed, the following values resolve automatically from `M
 | `TrainingConfig.WARMUP_RATIO` | `cockatoo_ml/registry/training.py` |
 | `TrainingConfig.USE_FP16/BF16/TF32` | `cockatoo_ml/registry/training.py` |
 | `ModelConfig.ATTENTION_IMPLEMENTATION` | `cockatoo_ml/registry/model.py` |
+| `ModelConfig.get_dtype()` | `cockatoo_ml/registry/model.py` |
 | `ModelConfig.INFERENCE_MAX_LENGTH` | `cockatoo_ml/registry/model.py` |
 | `ModelConfig.get_base_model_name()` | `cockatoo_ml/registry/model.py` |
 | `ModelConfig.get_max_token_length()` | `cockatoo_ml/registry/model.py` |
@@ -72,6 +73,7 @@ MODEL_TYPE = ModelType.MODERNBERT
 | `USE_FP16` | `True` | `ModelTrainingConfig.MODERNBERT_USE_FP16` |
 | `GRADIENT_CHECKPOINTING` | `True` | `ModelTrainingConfig.MODERNBERT_GRADIENT_CHECKPOINTING` |
 | `ATTENTION_IMPLEMENTATION` | `sdpa` | auto-derived in `ModelConfig` |
+| `MODERNBERT_DTYPE` | `float32` | `ModelConfig.MODERNBERT_DTYPE` |
 | Max token length (train) | `512` | `ModelConfig.MODERNBERT_MAX_TOKEN_LENGTH` |
 | Max token length (inference) | `8192` | `ModelConfig.MODERNBERT_MAX_INFERENCING_TOKEN_LENGTH` |
 | `USE_LLRD` | `True` | `ModelTrainingConfig.MODERNBERT_USE_LLRD` |
@@ -81,6 +83,7 @@ MODEL_TYPE = ModelType.MODERNBERT
 
 **Notes:**
 - `sdpa` (scaled dot-product attention) is auto-selected; this is required for efficient long-context handling and is only supported by ModernBERT in this project.
+- If you switch to `flash_attention_2`, set `ModelConfig.MODERNBERT_DTYPE` to `float16`, `bfloat16`, or `auto`. `float32` is not compatible with Flash Attention 2.
 - The low batch size (8) is intentional — ModernBERT-large is memory-intensive. Gradient accumulation is set high to compensate and maintain an effective batch of 96.
 - Training token length is capped at 512 to save memory. Inference can use up to 8192 tokens.
 - The `adamw_8bit` optimizer is strongly recommended for large models to reduce VRAM use during optimiser state storage.
@@ -165,10 +168,15 @@ MODEL_TYPE = ModelType.DEBERTA
    ```python
    MODEL_TYPE = ModelType.MODERNBERT   # or CLIP_VIT, DEBERTA
    ```
-3. **Verify** the per-model hyperparameters in [`cockatoo_ml/registry/training.py`](/cockatoo_ml/registry/training.py) under `ModelTrainingConfig`. Adjust any values (e.g. `MODERNBERT_BATCH_SIZE`) to match your hardware.
-4. **Update** `PathConfig.MODEL_OUTPUT_DIR` and `PathConfig.LOGGING_DIR` in [`cockatoo_ml/registry/paths.py`](/cockatoo_ml/registry/paths.py) to avoid overwriting previous runs.
-5. **Run** `prepare_data.py` if tokenization has not been done for the new model (tokenized cache is model-specific).
-6. **Run** `train.py`.
+3. **Set model load precision** in the same file (`cockatoo_ml/registry/model.py`) as needed:
+    ```python
+    MODERNBERT_DTYPE = "bfloat16"  # or "float16", "float32", "auto"
+    ```
+    For `MODERNBERT_ATTENTION_IMPLEMENTATION = "flash_attention_2"`, use `"float16"`, `"bfloat16"`, or `"auto"`.
+4. **Verify** the per-model hyperparameters in [`cockatoo_ml/registry/training.py`](/cockatoo_ml/registry/training.py) under `ModelTrainingConfig`. Adjust any values (e.g. `MODERNBERT_BATCH_SIZE`) to match your hardware.
+5. **Update** `PathConfig.MODEL_OUTPUT_DIR` and `PathConfig.LOGGING_DIR` in [`cockatoo_ml/registry/paths.py`](/cockatoo_ml/registry/paths.py) to avoid overwriting previous runs.
+6. **Run** `prepare_data.py` if tokenization has not been done for the new model (tokenized cache is model-specific).
+7. **Run** `train.py`.
 
 ---
 
