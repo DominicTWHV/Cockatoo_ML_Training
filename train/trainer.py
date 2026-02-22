@@ -3,6 +3,8 @@ import torch
 from transformers import Trainer
 
 from cockatoo_ml.registry import TrainingConfig
+from cockatoo_ml.logger.context import model_training_logger as logger
+
 from train.losses import AsymmetricLoss, BCEWithLogitsLoss
 
 
@@ -42,29 +44,100 @@ class CustomTrainer(Trainer):
         betas = getattr(TrainingConfig, 'OPTIMIZER_BETAS', (0.9, 0.999))
         eps = getattr(TrainingConfig, 'OPTIMIZER_EPS', 1e-8)
 
+        # build parameter groups — use LLRD if enabled, otherwise pass all params uniformly
+        use_llrd = getattr(TrainingConfig, 'USE_LLRD', False)
+        if use_llrd:
+            decay_factor = getattr(TrainingConfig, 'LLRD_DECAY_FACTOR', 0.9)
+            params = self._build_llrd_param_groups(lr, decay_factor, weight_decay)
+            logger.info(f"LLRD enabled: built {len(params)} parameter groups with decay factor {decay_factor}")
+        else:
+            params = self.model.parameters()
+
         if opt_name == 'adamw_8bit':
             try:
                 from bitsandbytes.optim import Adam8bit
 
-                optimizer = Adam8bit(self.model.parameters(), lr=lr, betas=betas, eps=eps, weight_decay=weight_decay)
+                optimizer = Adam8bit(params, lr=lr, betas=betas, eps=eps, weight_decay=weight_decay)
             except Exception:
-                optimizer = torch.optim.AdamW(self.model.parameters(), lr=lr, betas=betas, eps=eps, weight_decay=weight_decay)
+                optimizer = torch.optim.AdamW(params, lr=lr, betas=betas, eps=eps, weight_decay=weight_decay)
 
         elif opt_name == 'adamw':
-            optimizer = torch.optim.AdamW(self.model.parameters(), lr=lr, betas=betas, eps=eps, weight_decay=weight_decay)
+            optimizer = torch.optim.AdamW(params, lr=lr, betas=betas, eps=eps, weight_decay=weight_decay)
 
         elif opt_name == 'adam':
-            optimizer = torch.optim.Adam(self.model.parameters(), lr=lr, betas=betas, eps=eps, weight_decay=weight_decay)
+            optimizer = torch.optim.Adam(params, lr=lr, betas=betas, eps=eps, weight_decay=weight_decay)
 
         elif opt_name == 'sgd':
             momentum = getattr(TrainingConfig, 'OPTIMIZER_MOMENTUM', 0.9)
-            optimizer = torch.optim.SGD(self.model.parameters(), lr=lr, momentum=momentum, weight_decay=weight_decay)
+            optimizer = torch.optim.SGD(params, lr=lr, momentum=momentum, weight_decay=weight_decay)
 
         else:
             raise ValueError(f"Unknown optimizer specified in TrainingConfig.OPTIMIZER: {opt_name}")
 
         self.optimizer = optimizer
         return optimizer
+
+    def _build_llrd_param_groups(self, base_lr, decay_factor, weight_decay):
+        # build optimizer parameter groups with layer-wise learning rate decay
+        # the classifier/head receives base_lr; each layer closer to the input is scaled down by decay_facto, bias, LayerNorm, and layer_norm weights skip weight decay within every group (standard practice)
+        import re
+
+        no_decay_keywords = ["bias", "layernorm.weight", "layer_norm.weight"]
+        # param names containing any of these are treated as the top (head) group
+        head_keywords = ["classifier", "head", "pooler"]
+
+        def get_group_idx(name):
+            # extract transformer layer index from parameter name matches patterns: .layer.N.  .layers.N.  (covers DeBERTa, ModernBERT, CLIP)
+            match = re.search(r'\.layers?\.(\d+)\.', name)
+            if match:
+                return int(match.group(1)) + 1  # +1 reserves index 0 for embeddings / stem params
+            # classifier/head/pooler resolved to max_idx + 1 after scan
+            if any(kw in name.lower() for kw in head_keywords):
+                return -1
+            # everything else (embeddings, unprefixed norms, projections) lowest group
+            return 0
+
+        # 1st pass: find the highest layer index present in this model
+        max_layer_idx = 0
+        for name, param in self.model.named_parameters():
+            if not param.requires_grad:
+                continue
+            idx = get_group_idx(name)
+            if idx > max_layer_idx:
+                max_layer_idx = idx
+
+        head_idx = max_layer_idx + 1  # head sits one step above the topmost transformer layer
+
+        # 2nd pass: assign each parameter to its group
+        layer_groups = {}  # group_idx -> {'decay': [...], 'no_decay': [...]}
+        for name, param in self.model.named_parameters():
+            if not param.requires_grad:
+                continue
+            idx = get_group_idx(name)
+            group_idx = head_idx if idx == -1 else idx
+
+            if group_idx not in layer_groups:
+                layer_groups[group_idx] = {'decay': [], 'no_decay': []}
+
+            is_no_decay = any(kw in name.lower() for kw in no_decay_keywords)
+            if is_no_decay:
+                layer_groups[group_idx]['no_decay'].append(param)
+
+            else:
+                layer_groups[group_idx]['decay'].append(param)
+
+        # build param group dicts: head (head_idx) -> base_lr; depth increases toward embeddings
+        param_groups = []
+        for group_idx, group_params in layer_groups.items():
+            depth = head_idx - group_idx  # 0 for head, 1 for top transformer layer, ect.
+            lr = base_lr * (decay_factor ** depth)
+            if group_params['decay']:
+                param_groups.append({'params': group_params['decay'], 'lr': lr, 'weight_decay': weight_decay})
+                
+            if group_params['no_decay']:
+                param_groups.append({'params': group_params['no_decay'], 'lr': lr, 'weight_decay': 0.0})
+
+        return param_groups
 
     def compute_loss(self, model, inputs, return_outputs=False, **kwargs):
         # compute loss with optional label masking for multi-label classification
