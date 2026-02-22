@@ -28,6 +28,12 @@ class ModelConfig:
     MODERNBERT_MAX_INFERENCING_TOKEN_LENGTH = 8192  # allow longer inputs for inferencing? (experimental)
     MODERNBERT_ATTENTION_IMPLEMENTATION = "sdpa"  # can use sdpa or flash_attention_2
 
+    # model loading precision (used in from_pretrained(dtype=...))
+    # valid values: 'float32', 'float16', 'bfloat16', 'auto'
+    CLIP_DTYPE = "float16"
+    DEBERTA_DTYPE = "float16"
+    MODERNBERT_DTYPE = "auto"
+
 
     # epsilon for numerical stability
     EPSILON = 1e-6
@@ -60,6 +66,50 @@ class ModelConfig:
     # attention implementation for transformer model
 
     ATTENTION_IMPLEMENTATION = MODERNBERT_ATTENTION_IMPLEMENTATION if MODEL_TYPE == ModelType.MODERNBERT else "eager"  # use standard attention for CLIP and DeBERTa, but switch to sdpa for ModernBERT which supports it for better efficiency on long inputs
+
+    @classmethod
+    def get_dtype_name(cls):
+        if cls.MODEL_TYPE == ModelType.CLIP_VIT:
+            return cls.CLIP_DTYPE
+
+        if cls.MODEL_TYPE == ModelType.DEBERTA:
+            return cls.DEBERTA_DTYPE
+
+        if cls.MODEL_TYPE == ModelType.MODERNBERT:
+            return cls.MODERNBERT_DTYPE
+
+        raise ValueError(f"Unknown model type: {cls.MODEL_TYPE}")
+
+    @classmethod
+    def get_dtype(cls):
+        import torch
+
+        dtype_name = str(cls.get_dtype_name()).lower().strip()
+        dtype_map = {
+            "float32": torch.float32,
+            "float16": torch.float16,
+            "bfloat16": torch.bfloat16,
+            "auto": "auto",
+        }
+
+        if dtype_name not in dtype_map:
+            raise ValueError(
+                f"Invalid dtype '{dtype_name}'. Expected one of: {', '.join(dtype_map.keys())}."
+            )
+
+        return dtype_map[dtype_name]
+
+    @classmethod
+    def validate_attention_precision_compatibility(cls):
+        dtype_name = str(cls.get_dtype_name()).lower().strip()
+        if (
+            cls.MODEL_TYPE == ModelType.MODERNBERT
+            and cls.ATTENTION_IMPLEMENTATION == "flash_attention_2"
+            and dtype_name not in {"float16", "bfloat16", "auto"}
+        ):
+            raise ValueError(
+                "flash_attention_2 requires ModelConfig.MODERNBERT_DTYPE to be 'float16', 'bfloat16', or 'auto'."
+            )
     
     # max sequence length - depends on model type
     @classmethod

@@ -78,7 +78,18 @@ class ThreatClassifier:
         # For multi-label classification, we must use manual inference (not pipeline)
         # because the text-classification pipeline uses softmax (single-label), not sigmoid (multi-label)
         self.tokenizer = AutoTokenizer.from_pretrained(model_path)
-        self.model = AutoModelForSequenceClassification.from_pretrained(model_path)
+        ModelConfig.validate_attention_precision_compatibility()
+
+        model_dtype = ModelConfig.get_dtype()
+        if self.device == -1 and model_dtype in {torch.float16, torch.bfloat16}:
+            logger.warning("Half-precision dtype requested on CPU; falling back to float32 for inference.")
+            model_dtype = torch.float32
+
+        self.model = AutoModelForSequenceClassification.from_pretrained(
+            model_path,
+            attn_implementation=ModelConfig.ATTENTION_IMPLEMENTATION,
+            dtype=model_dtype,
+        )
 
         if self.device == 0:
             self.model = self.model.cuda()

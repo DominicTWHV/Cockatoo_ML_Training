@@ -126,6 +126,8 @@ def load_model(model_name=None, num_labels=None, model_type=None):
     
     label2id = {label: idx for idx, label in enumerate(LabelConfig.ACTIVE_LABELS)}
     id2label = {idx: label for label, idx in label2id.items()}
+    model_dtype = ModelConfig.get_dtype()
+    ModelConfig.validate_attention_precision_compatibility()
     
     logger.info(f"Loading model type: {model_type}")
     logger.info(f"Model name: {model_name}")
@@ -143,7 +145,7 @@ def load_model(model_name=None, num_labels=None, model_type=None):
             model_name,
             num_labels=num_labels,
             problem_type=ModelConfig.PROBLEM_TYPE,
-            torch_dtype=torch.float32,
+            dtype=model_dtype,
             label2id=label2id,
             id2label=id2label,
             attn_implementation=ModelConfig.ATTENTION_IMPLEMENTATION
@@ -156,7 +158,7 @@ def load_model(model_name=None, num_labels=None, model_type=None):
             model_name,
             num_labels=num_labels,
             problem_type=ModelConfig.PROBLEM_TYPE,
-            torch_dtype=torch.float32,
+            dtype=model_dtype,
             label2id=label2id,
             id2label=id2label,
             attn_implementation=ModelConfig.ATTENTION_IMPLEMENTATION
