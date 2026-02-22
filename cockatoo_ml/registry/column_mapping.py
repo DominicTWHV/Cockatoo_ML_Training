@@ -31,16 +31,6 @@ class DatasetColumnMapping:
             'hate_speech': 'label'  # 1 = hate, 0 = not hate
         }
     }
-    
-    # Tweet Evaluation - Emotion config column mapping
-    # The emotion config has a multiclass label: 0=anger, 1=joy, 2=optimism, 3=sadness
-    # The data loader pre-processes this into a binary 'anger' column before extraction
-    TWEET_EMOTION = {
-        'text_col': 'text',
-        'labels': {
-            'hate_speech': 'anger',  # anger tweets (label==0) used as hate_speech signal
-        }
-    }
 
     # Toxic Chat dataset column mapping
     TOXICCHAT = {

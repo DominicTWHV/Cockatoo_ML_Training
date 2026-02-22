@@ -3,7 +3,7 @@ class LabelConfig:
     ALL_LABELS = ['scam', 'violence', 'nsfw', 'harassment', 'hate_speech', 'toxicity', 'obscenity', 'jailbreaking', 'genocide']
     
     # active labels for current training run (can be dynamically set and can be the same as ALL_LABELS or a subset)
-    ACTIVE_LABELS = ['scam', 'violence', 'harassment', 'hate_speech', 'toxicity', 'obscenity', 'jailbreaking', 'genocide']
+    ACTIVE_LABELS = ['scam', 'violence', 'harassment', 'hate_speech', 'toxicity', 'obscenity', 'genocide']
     
     @classmethod
     def set_active_labels(cls, labels):
