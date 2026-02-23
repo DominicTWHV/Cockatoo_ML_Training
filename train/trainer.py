@@ -56,9 +56,20 @@ class CustomTrainer(Trainer):
         if opt_name == 'adamw_8bit':
             try:
                 from bitsandbytes.optim import Adam8bit
+                import bitsandbytes as bnb
+
+                # bnb can import successfully but have broken CUDA paths in containers (ie missing libcudart.so mount).  Check explicitly before using it
+                if not bnb.cuda_is_available():
+                    raise RuntimeError(
+                        "bitsandbytes reports CUDA unavailable — this usually means the CUDA "
+                        "shared libraries are not visible inside the container. "
+                        "Falling back to AdamW. Set OPTIMIZER='adamw' to suppress this warning, "
+                        "or ensure the container has the correct CUDA toolkit paths mounted."
+                    )
 
                 optimizer = Adam8bit(params, lr=lr, betas=betas, eps=eps, weight_decay=weight_decay)
-            except Exception:
+            except Exception as e:
+                logger.warning(f"bitsandbytes Adam8bit unavailable: {e}")
                 optimizer = torch.optim.AdamW(params, lr=lr, betas=betas, eps=eps, weight_decay=weight_decay)
 
         elif opt_name == 'adamw':
