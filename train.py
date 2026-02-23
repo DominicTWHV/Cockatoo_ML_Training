@@ -1,5 +1,6 @@
 import argparse
 import json
+import os
 import torch
 
 from pathlib import Path
@@ -54,6 +55,20 @@ def main():
         help="Directory to save evaluation plots (default: graph).",
     )
     args = parser.parse_args()
+
+    # warn if distributed env vars were injected by the container runtime but torchrun was not used.
+    # when these are set without a proper DDP init, HuggingFace Trainer enters a broken distributed
+    # mode: it thinks it is a non-primary rank, skips moving the model to GPU, and effectively loads
+    # nothing — producing the "1 GB VRAM with a huge batch" symptom.
+    _DIST_VARS = ('RANK', 'LOCAL_RANK', 'WORLD_SIZE', 'MASTER_ADDR', 'MASTER_PORT')
+    _detected_dist = {k: os.environ[k] for k in _DIST_VARS if k in os.environ}
+    if _detected_dist and not torch.distributed.is_initialized():
+        logger.warning(
+            f"Distributed env vars detected but torch.distributed is NOT initialized: {_detected_dist}. "
+            "If you are NOT using torchrun/DDP, unset these variables to prevent the Trainer from "
+            "entering a broken distributed mode (near-zero VRAM, model not loaded on GPU). "
+            "See docs/containers.md for details."
+        )
 
     # if eval data json arg is passed, just generate plots
     if args.eval_data_json:
