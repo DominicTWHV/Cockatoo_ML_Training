@@ -1,6 +1,6 @@
 from .api import APIConfig, WebhookConfig
 from .colors import bcolors
-from .datasets import DatasetSources, DatasetPaths, DatasetColumns, DataSplitConfig, DataDedupConfig, RebalancingPolicy, WeightCheckingPolicy, WeightRatioThresholds
+from .datasets import DatasetSources, DatasetPaths, DatasetColumns, DataSplitConfig, DataDedupConfig, DataMixConfig, RebalancingPolicy, WeightCheckingPolicy, WeightRatioThresholds
 from .labels import LabelConfig
 from .model import ModelConfig, InferenceConfig, ModelType
 from .paths import PathConfig
@@ -12,6 +12,7 @@ __all__ = [
     'bcolors',
     'CallbackConfig',
     'DataDedupConfig',
+    'DataMixConfig',
     'DatasetColumns',
     'DatasetPaths',
     'DatasetSources',

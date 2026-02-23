@@ -256,3 +256,19 @@ class DataDedupConfig:
     #   cons: may lose a lot of data
     
     SAME_TEXT_DIFFERENT_LABELS = "keep_first"
+
+
+class DataMixConfig:
+    # controls how the combined dataset is shuffled/interleaved after merging all sources
+
+    # whether to shuffle the combined dataframe after merging and deduplication
+    # when True, entries from every source dataset are distributed evenly throughout
+    # the merged set instead of being grouped by source (dataset A rows first, then B, etc.)
+    #
+    # set to False to preserve original concatenation order (not recommended for training)
+    SHUFFLE_AFTER_MERGE = True
+
+    # random seed used for the post-merge shuffle
+    # set to an integer for deterministic / reproducible shuffling
+    # set to None for a different random order each run
+    SHUFFLE_RANDOM_STATE = 42

@@ -5,7 +5,7 @@ from datasets import Dataset, DatasetDict
 
 from sklearn.model_selection import train_test_split
 
-from cockatoo_ml.registry import LabelConfig, DataSplitConfig, DatasetColumns, DataDedupConfig, RebalancingPolicy
+from cockatoo_ml.registry import LabelConfig, DataSplitConfig, DatasetColumns, DataDedupConfig, DataMixConfig, RebalancingPolicy
 from cockatoo_ml.registry.dataset_label_mapping import get_dataset_label_mapping
 
 from cockatoo_ml.logger.context import data_processing_logger as logger
@@ -150,7 +150,18 @@ def combine_datasets(datasets):
         
     else:
         logger.info(f"No duplicates found (kept {post_dedupe_count}/{pre_dedupe_count})")
-    
+
+    # shuffle so entries from each source dataset are evenly spread across the merged set
+    if DataMixConfig.SHUFFLE_AFTER_MERGE:
+        combined_df = combined_df.sample(
+            frac=1,
+            random_state=DataMixConfig.SHUFFLE_RANDOM_STATE
+        ).reset_index(drop=True)
+        seed_desc = str(DataMixConfig.SHUFFLE_RANDOM_STATE) if DataMixConfig.SHUFFLE_RANDOM_STATE is not None else "non-deterministic"
+        logger.info(f"Shuffled merged dataset ({post_dedupe_count} entries, seed={seed_desc})")
+    else:
+        logger.info("Post-merge shuffle disabled (DataMixConfig.SHUFFLE_AFTER_MERGE=False)")
+
     return combined_df
 
 
