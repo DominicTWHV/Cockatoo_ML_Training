@@ -1,3 +1,5 @@
+import os
+
 from .model import ModelConfig, ModelType
 
 class ModelTrainingConfig:
@@ -90,7 +92,9 @@ class TrainingConfig:
     SAVE_STEPS = 121 if SAVE_STRATEGY == 'steps' else None
     
     # dataloader settings
-    DATALOADER_NUM_WORKERS = 4
+    # override via DATALOADER_NUM_WORKERS env var — set to 0 in containers with small /dev/shm
+    # or just manually set it here, the value will be used if env var is not set
+    DATALOADER_NUM_WORKERS = int(os.environ.get('DATALOADER_NUM_WORKERS', 4))
     SAVE_TOTAL_LIMIT = 2
     
     # distributed training
