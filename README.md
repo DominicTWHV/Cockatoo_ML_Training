@@ -31,6 +31,7 @@ These files will be referenced in the README as they are needed, but here are al
 - [Telemetry Client](/docs/telemetry.md)
 - [Inference API Guide](/docs/api.md)
 - [Multi-Dataset Training Guide](/docs/multi_dataset_process.md)
+- [Container & Multi-GPU (DDP) Guide](/docs/containers.md)
 - [Datasets Used | Citations](/docs/datasets.md)
 
 ## Training
@@ -97,6 +98,14 @@ Run training loop:
 ```bash
 python3 train.py
 ```
+
+**Multi-GPU / Container**
+
+For multi-GPU training, use the provided `start_train.sh` script — it auto-detects GPU count and launches with `torchrun` (DDP) when more than one GPU is available, or falls back to plain `python3` for single-GPU/CPU.
+
+If running inside a Docker container (including RunPod pods), see the [Container & Multi-GPU guide](/docs/containers.md) for important notes on `/dev/shm` sizing, `bitsandbytes` CUDA detection, and distributed env var injection that can cause near-zero VRAM usage.
+
+---
 
 **Run Evaluation**
 
