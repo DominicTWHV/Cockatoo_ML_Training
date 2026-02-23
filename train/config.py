@@ -1,6 +1,18 @@
+import os
+
 from transformers import TrainingArguments
 
 from cockatoo_ml.registry import TrainingConfig, PathConfig
+from cockatoo_ml.logger.context import model_training_logger as logger
+
+# detect container environment: present when Docker/Podman/RunPod creates the container
+_in_container = os.path.exists('/.dockerenv') or os.environ.get('CONTAINER_MODE', '0') == '1'
+if _in_container:
+    logger.info(
+        "Container environment detected (/.dockerenv present or CONTAINER_MODE=1). "
+        "dataloader_pin_memory disabled to avoid /dev/shm exhaustion. "
+        "Set DATALOADER_NUM_WORKERS=0 in env if DataLoader workers still crash."
+    )
 
 # this file contains training configs for the model
 def get_training_args(
@@ -60,6 +72,7 @@ def get_training_args(
         save_steps=TrainingConfig.SAVE_STEPS,
         max_grad_norm=TrainingConfig.MAX_GRAD_NORM if TrainingConfig.USE_GRADIENT_CLIPPING else 0.0,
         dataloader_num_workers=TrainingConfig.DATALOADER_NUM_WORKERS,
+        dataloader_pin_memory=not _in_container,
         save_total_limit=TrainingConfig.SAVE_TOTAL_LIMIT,
     )
     
