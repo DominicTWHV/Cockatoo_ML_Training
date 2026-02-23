@@ -56,6 +56,9 @@ class LiveMetricsWebhookCallback(TrainerCallback):
             logger.warning(f"Failed to send metrics: {e}")
 
     def on_log(self, args, state, control, **kwargs):
+        if not state.is_world_process_zero:
+            return  # only rank 0 sends telemetry — avoids duplicate posts under DDP
+
         if not self.enable_training or not self.training_endpoint_url:
             return # only send metrics if training telemetry is enabled and endpoint is valid
         
@@ -74,6 +77,9 @@ class LiveMetricsWebhookCallback(TrainerCallback):
             self._send_metrics(self.training_endpoint_url, payload)
 
     def on_evaluate(self, args, state, control, metrics=None, **kwargs):
+        if not state.is_world_process_zero:
+            return  # only rank 0 sends telemetry — avoids duplicate posts under DDP
+
         if not self.enable_validation or not self.validation_endpoint_url:
             return # only send metrics if validation telemetry is enabled and endpoint is valid
         
