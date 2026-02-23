@@ -167,24 +167,8 @@ class CustomTrainer(Trainer):
         device = logits.device
         dtype = logits.dtype
 
-        # build the loss function for this forward pass (device/dtype aware)
-        if self.loss_fn_name == 'asl':
-            # asl does not use pos_weight; class imbalance is handled via the asymmetric focusing parameters and probability margin instead.
-            # so pos_weight is ignored here
-            loss_fct = AsymmetricLoss(
-                gamma_neg=getattr(TrainingConfig, 'ASL_GAMMA_NEG', 4),
-                gamma_pos=getattr(TrainingConfig, 'ASL_GAMMA_POS', 1),
-                clip=getattr(TrainingConfig, 'ASL_CLIP', 0.05),
-                reduction='none',
-            )
-
-        else:
-            # imports from losses.py
-            # BCEWithLogitsLoss — pos_weight is moved to the correct device/dtype inside the wrapper
-            loss_fct = BCEWithLogitsLoss(pos_weight=self.pos_weight, reduction='none')
-
-        # compute per-element loss
-        loss_per_element = loss_fct(logits, labels.to(dtype))
+        # compute per-element loss — reuse the pre-built self.loss_fct (built once in __init__)
+        loss_per_element = self.loss_fct(logits, labels.to(dtype))
         
         # apply label masking if available
         if label_mask is not None:
