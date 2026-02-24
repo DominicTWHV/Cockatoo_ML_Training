@@ -6,7 +6,7 @@ This repository is what we plan to use for the training/inferencing server compo
 
 
 > [!Important]
-> This repository is highly experimental and is constantly being updated. It does not yet produce production-quality models. We are tinkering with different ideas and approaches, so expect breaking changes and refactors. We will eventually stabilize the codebase and produce production-ready models, but for now, this is a playground for us to experiment and iterate quickly.
+> This repository is highly experimental and is constantly being updated. We are tinkering with different ideas and approaches, so expect breaking changes and refactors.
 
 ---
 
