@@ -42,9 +42,9 @@ docker run --shm-size=8g ...
 # docker-compose
 shm_size: '8gb'
 ```
-On RunPod, add this arg: `--shm-size 8g` into the pod startup flags
 
 **Option B** — Reduce or disable DataLoader workers via env var:
+
 ```bash
 DATALOADER_NUM_WORKERS=0 python3 train.py
 ```
@@ -56,7 +56,7 @@ Setting workers to `0` disables the shared-memory path entirely (data loaded in 
 
 **Symptom:** Same near-zero VRAM symptom. Logs may show `n_gpu=0` or the Trainer acts as if it's a non-primary rank.
 
-**Cause:** Some container orchestrators (Kubernetes, RunPod multi-node) pre-set `RANK`, `LOCAL_RANK`, `WORLD_SIZE`, `MASTER_ADDR`, and/or `MASTER_PORT` as environment variables. HuggingFace `Trainer` reads these and assumes it is running inside a `torchrun`-managed DDP process. Without a proper `torch.distributed` init, the Trainer skips GPU model placement entirely on non-zero ranks.
+**Cause:** Some container orchestrators (Kubernetes, multi-node) pre-set `RANK`, `LOCAL_RANK`, `WORLD_SIZE`, `MASTER_ADDR`, and/or `MASTER_PORT` as environment variables. HuggingFace `Trainer` reads these and assumes it is running inside a `torchrun`-managed DDP process. Without a proper `torch.distributed` init, the Trainer skips GPU model placement entirely on non-zero ranks.
 
 **Fix (already applied):** `train.py` now logs a clear warning if these variables are detected without `torch.distributed` being initialized.
 
@@ -70,17 +70,6 @@ If you *are* running multi-GPU, use `torchrun` — see the [DDP section below](#
 
 ---
 
-### Potential Problems for Container Deployments
-
-| Issue | Fix |
-|---|---|
-| Near-zero VRAM, model not on GPU | Check for injected `RANK`/`LOCAL_RANK` env vars; unset if not using DDP |
-| Near-zero VRAM, loss static | Set `--shm-size=8g` or `DATALOADER_NUM_WORKERS=0` |
-| `bitsandbytes` warning in logs | Normal: fell back to AdamW. Use `-devel` CUDA image or set `OPTIMIZER=adamw` |
-| Flash Attention failure in container | Handled automatically: falls back to `sdpa` |
-
----
-
 ## Multi-GPU (DDP)
 
 ### Using `start_train.sh` (recommended)
@@ -88,7 +77,7 @@ If you *are* running multi-GPU, use `torchrun` — see the [DDP section below](#
 The provided `start_train.sh` now auto-detects GPU count at runtime:
 
 - **≥2 GPUs detected:** launches with `torchrun --nproc_per_node=<count>` (proper DDP)
-- **1 GPU or CPU:** launches with plain `python3`
+- **1 GPU or CPU:** launches with plain `python3 train.py`
 
 No changes needed; just run the script as normal.
 
