@@ -16,7 +16,7 @@ This repository is what we plan to use for the training/inferencing server compo
 
 **DeBERTa V3** (Stable)
 
-**ModernBERT** (Experimental)
+**ModernBERT** (Stable)
 
 For config changes needed to switch between models, reference the model switching guide [here](/docs/model_switching.md).
 
